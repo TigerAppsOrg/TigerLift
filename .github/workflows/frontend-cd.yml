@@ -18,6 +18,8 @@ jobs:
                 cd frontend
                 npm ci
                 npm run build
+              env:
+                VITE_GOOGLE_API_KEY: ${{ secrets.VITE_GOOGLE_API_KEY }}
             - name: Commit build
               run: |
                 git config --global user.email "github-actions@github.com"
