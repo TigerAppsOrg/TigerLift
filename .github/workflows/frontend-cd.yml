@@ -20,7 +20,7 @@ jobs:
                 npm run build
             - name: Commit build
               run: |
-                git config --global user.email "github-actions@github.com'
+                git config --global user.email "github-actions@github.com"
                 git config --global user.name "GitHub Actions"
                 git add frontend/dist
                 git commit -m "Build frontend" || echo "No changes to commit"
