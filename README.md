@@ -11,7 +11,7 @@ Julia Ying, Grace Kim, Ritika Bhatnagar, Aasha Jain
 - To run the application, make two terminals:
   - Make sure you are in `backend` and run `python app.py`.
   - Make sure you are in `frontend` and run `npm run dev`.
-- Navigate to http://localhost:5173/ to view application. (Backend runs on http://localhost:3100/).
+- Navigate to http://localhost:5173/ to view application. (Backend runs on http://localhost:5000/).
 
 ### Deploying
 

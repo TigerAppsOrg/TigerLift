@@ -742,4 +742,4 @@ if __name__ == "__main__":
     debug = FLASK_ENV == "development"
     if not app._got_first_request:
         database.database_setup()
-    app.run(host="0.0.0.0", port=3100, debug=debug)
+    app.run(host="0.0.0.0", port=5000, debug=debug)
