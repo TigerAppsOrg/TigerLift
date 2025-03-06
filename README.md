@@ -17,5 +17,4 @@ Julia Ying, Grace Kim, Ritika Bhatnagar, Aasha Jain
 
 - `cd frontend` and run `npm run build`. This will create a `dist` folder in `frontend`.
 - Commit that new `dist` folder.
-- Go to Render and Manual Deploy using that latest commit.
-- Navigate to https://tigerlift.onrender.com/.
+- Navigate to https://lift.tigerapps.org/.

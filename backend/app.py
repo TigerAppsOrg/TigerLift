@@ -720,7 +720,7 @@ def send_email_notification(netid, mail, subject, message):
         msg["To"] = mail
         msg["Subject"] = subject
         # Attach the message
-        message = message + "Please see details on tigerlift.onrender.com\n"
+        message = message + "Please see details on lift.tigerapps.org\n"
         msg.attach(MIMEText(message, "plain"))
 
         try:
