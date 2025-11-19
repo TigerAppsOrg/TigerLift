@@ -1,6 +1,6 @@
 # TigerLift - Fall 2024 COS 333 Project
 
-Julia Ying, Grace Kim, Ritika Bhatnagar, Aasha Jain
+Originally created by Julia Ying, Grace Kim, Ritika Bhatnagar, Aasha Jain
 
 ### Setting up
 
