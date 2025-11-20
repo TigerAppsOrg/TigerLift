@@ -27,6 +27,8 @@ def database_setup():
             creation_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             current_riders TEXT[][],
+            leave_by_time TIME,
+            phone_number VARCHAR(20),
             note VARCHAR(250)
         );
 
@@ -90,6 +92,8 @@ def create_ride(
     destination,
     arrival_time,
     note="",
+    leave_by_time=None,
+    phone_number=None,
 ):
     """
     Adds a ride to the Rides database
@@ -99,8 +103,8 @@ def create_ride(
 
     sql_command = f"""
         INSERT INTO Rides (admin_netid, admin_name, admin_email, max_capacity, current_riders,
-        origin_dict, destination_dict, arrival_time, note, updated_at) VALUES (%s, %s, %s, %s, 
-        %s, %s, %s, %s, %s, CURRENT_TIMESTAMP);   
+        origin_dict, destination_dict, arrival_time, leave_by_time, phone_number, note, updated_at)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, CURRENT_TIMESTAMP);
     """
 
     values = (
@@ -112,6 +116,8 @@ def create_ride(
         origin,
         destination,
         arrival_time,
+        leave_by_time,
+        phone_number,
         note,
     )
 

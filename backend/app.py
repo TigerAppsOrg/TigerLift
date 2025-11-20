@@ -228,6 +228,8 @@ def addride():
         origin: a dictionary containing the origin location
         dest: a dictionary containing the destination location
         arrival_time: a datetime object with the arrival date & time
+        leave_by_time (optional): time to leave origin
+        phone_number (optional): contact phone number
         note (optional): note with the rideshare
 
     Returns:
@@ -242,6 +244,8 @@ def addride():
     dest_obj = data.get("destination")
 
     note = data.get("note")
+    leave_by_time = data.get("leave_by_time")
+    phone_number = data.get("phone_number")
 
     origin_addr = origin_obj["formatted_address"]
     origin_name = origin_obj["name"]
@@ -270,6 +274,8 @@ def addride():
             dest_json,
             arrival_time,
             note,
+            leave_by_time,
+            phone_number,
         )
         return jsonify({"success": True, "message": "Rideshare successfully created!"})
     except:

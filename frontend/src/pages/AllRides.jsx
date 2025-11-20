@@ -2,6 +2,7 @@
 import { useRef, useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import DateTimePicker from "../components/DateTimePicker.jsx";
+import { TimePicker } from "antd";
 import RideCard from "../components/RideCard.jsx";
 import Button from "../components/Button.jsx";
 import Modal from "../components/Modal.jsx";
@@ -59,6 +60,8 @@ export default function AllRides() {
   const [dest, setDest] = useState(null);
   const [date, setDate] = useState("");
   const [time, setTime] = useState("");
+  const [leaveByTime, setLeaveByTime] = useState("");
+  const [phoneNumber, setPhoneNumber] = useState("");
   const [rideNote, setRideNote] = useState("");
   const [isCreatingRide, setIsCreatingRide] = useState(false);
 
@@ -188,6 +191,7 @@ export default function AllRides() {
     }
 
     if (arrival_time_iso && now.getTime() >= arrival_time_iso.getTime()) {
+      document.activeElement?.blur(); // Remove focus from any active input
       setValidationModalTitle("Invalid Input");
       setValidationModalMessage("Cannot enter a date in the past.");
       setShowValidationModal(true); // Show the validation modal
@@ -208,6 +212,7 @@ export default function AllRides() {
       !parsedDate.isValid() ||
       !parsedTime.isValid()
     ) {
+      document.activeElement?.blur(); // Remove focus from any active input
       setValidationModalTitle("Missing fields");
       setValidationModalMessage(
         "You must provide all fields to create a ride."
@@ -226,6 +231,10 @@ export default function AllRides() {
       "HH:mm:ss"
     )}`;
     const arrival_time_iso = new Date(arrival_time_string).toISOString();
+
+    // Format leave by time if provided
+    const leave_by_time_formatted = leaveByTime ? leaveByTime.format("HH:mm:ss") : null;
+
     try {
       const response = await fetch("/api/addride", {
         method: "POST",
@@ -237,6 +246,8 @@ export default function AllRides() {
           origin: origin,
           destination: dest,
           arrival_time: arrival_time_iso,
+          leave_by_time: leave_by_time_formatted,
+          phone_number: phoneNumber || null,
           note: rideNote,
         }),
       });
@@ -275,6 +286,8 @@ export default function AllRides() {
     setDest("");
     setDate("");
     setTime("");
+    setLeaveByTime("");
+    setPhoneNumber("");
     setRideNote("");
     originRef.current = null;
     destinationRef.current = null;
@@ -671,17 +684,40 @@ export default function AllRides() {
                   />
                 </div>
               </div>
+              <div className="flex gap-3">
+                <div className="flex-1">
+                  <p className="font-medium mb-1">Arrival Time (in ET)</p>
+                  <DateTimePicker
+                    date={date}
+                    setDate={setDate}
+                    time={time}
+                    setTime={setTime}
+                  />
+                </div>
+                <div>
+                  <p className="font-medium mb-1">Leave By:</p>
+                  <TimePicker
+                    format="h:mm A"
+                    onChange={setLeaveByTime}
+                    placeholder="Select time"
+                    style={{ height: "38px", minWidth: "120px" }}
+                    value={leaveByTime}
+                    allowClear={true}
+                  />
+                </div>
+              </div>
               <div>
-                <p className="font-medium mb-1">Arrival Time (in ET)</p>
-                <DateTimePicker
-                  date={date}
-                  setDate={setDate}
-                  time={time}
-                  setTime={setTime}
+                <p className="font-medium mb-1">Phone Number (Optional)</p>
+                <input
+                  type="tel"
+                  value={phoneNumber}
+                  onChange={(e) => setPhoneNumber(e.target.value)}
+                  placeholder="Enter phone number"
+                  className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-theme_medium_1"
                 />
               </div>
               <div>
-                <p className="font-medium mb-1">Optional Note to Riders</p>
+                <p className="font-medium mb-1">Note to Riders (Optional)</p>
                 <CustomTextArea
                   placeholder={
                     "Add an optional note here, such as a suggested time to meet up, if you're flexible with the arrival time, or anything else. (Max 200 characters)."
