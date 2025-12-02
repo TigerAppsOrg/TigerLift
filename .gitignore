@@ -1,4 +1,12 @@
 .env
 __pycache__/
 .DS_Store
+
+# Python virtual environments
 .venv/
+venv/
+env/
+ENV/
+
+# Node modules
+node_modules/
