@@ -48,6 +48,11 @@ export default function AllRides() {
   const [validationModalMessage, setValidationModalMessage] = useState(""); // message inside validation modal
   const [validationModalTitle, setValidationModalTitle] = useState(""); // title of validation modal
 
+  const [showJoinModal, setShowJoinModal] = useState(false); // controls join request modal visibility
+  const [selectedRide, setSelectedRide] = useState(null); // stores the ride being requested
+  const [phoneNumber, setPhoneNumber] = useState(""); // stores user's phone number input
+  const [joinComments, setJoinComments] = useState(""); // stores optional comments from user
+
   // Refs for handling input elements
   const originRef = useRef(null); // stores origin
   const destinationRef = useRef(null); // stores destination
@@ -296,12 +301,19 @@ export default function AllRides() {
     setLoading(false);
   };
 
+  const handleOpenJoinModal = (ride) => {
+    setSelectedRide(ride);
+    setShowJoinModal(true);
+  };
+
   // Handles ride requests made by user
   const handleRideRequest = async (
     rideid,
     origin,
     destination,
-    arrival_time
+    arrival_time,
+    phoneNumber, 
+    comments 
   ) => {
     setPendingRideId((prev) => [...prev, rideid]); // track pending request by ID
     try {
@@ -319,8 +331,23 @@ export default function AllRides() {
           origin_name: origin["name"],
           destination_name: destination["name"],
           formatted_arrival_time: formattedArrivalTime,
+          phone_number: phoneNumber, 
+          comments: comments, 
         }),
       });
+
+      handleShowPopupMessage(
+        setPopupMessageInfo,
+        true,
+        "Request sent! An email has been sent to the ride creator."
+      );
+
+      // Close modal and reset fields
+      setShowJoinModal(false);
+      setPhoneNumber("");
+      setJoinComments("");
+      setSelectedRide(null);
+
       await fetchDashboardData(); // refresh dashboardData after requesting ride
       if (!response.ok) {
         console.error("Request failed:", response.status);
@@ -579,13 +606,7 @@ export default function AllRides() {
                     ride.admin_netid === dashboardData.user_info.netid ||
                     ride.current_riders.length === ride.max_capacity
                       ? () => {}
-                      : () =>
-                          handleRideRequest(
-                            ride.id,
-                            ride.origin,
-                            ride.destination,
-                            ride.arrival_time
-                          )
+                      : () => handleOpenJoinModal(ride) // open modal instead of direct request
                   }
                   buttonClassName={`${
                     ride.admin_netid === dashboardData.user_info.netid
@@ -720,6 +741,77 @@ export default function AllRides() {
             </div>
           </div>
         </WarningModal>
+      )}
+
+      {showJoinModal && selectedRide && (
+        <Modal
+          isOpen={showJoinModal}
+          onClose={() => {
+            setShowJoinModal(false);
+            setPhoneNumber("");
+            setJoinComments("");
+            setSelectedRide(null);
+          }}
+          title="Request to Join Ride"
+        >
+          <div className="flex flex-col gap-4">
+            <div className="bg-theme_light_1 p-3 rounded-lg">
+              <p className="text-sm text-theme_dark_1">
+                ✉️ An email will be sent to the ride creator with your contact information and request.
+              </p>
+            </div>
+
+            <div>
+              <p className="font-medium mb-2">Phone Number</p>
+              <input
+                type="tel"
+                value={phoneNumber}
+                onChange={(e) => setPhoneNumber(e.target.value)}
+                placeholder="Enter your phone number"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-theme_medium_1"
+              />
+            </div>
+
+            <div>
+              <p className="font-medium mb-2">Optional Comments</p>
+              <CustomTextArea
+                placeholder="Add any comments or questions for the ride creator (optional)"
+                inputValue={joinComments}
+                setInputValue={setJoinComments}
+                maxLength={200}
+              />
+            </div>
+
+            <div className="flex justify-end gap-2">
+              <Button
+                onClick={() => {
+                  setShowJoinModal(false);
+                  setPhoneNumber("");
+                  setJoinComments("");
+                  setSelectedRide(null);
+                }}
+                className="px-4 py-2 text-theme_dark_1 hover:text-theme_medium_1"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={() =>
+                  handleRideRequest(
+                    selectedRide.id,
+                    selectedRide.origin,
+                    selectedRide.destination,
+                    selectedRide.arrival_time,
+                    phoneNumber,
+                    joinComments
+                  )
+                }
+                className="bg-theme_medium_1 text-white hover:bg-theme_dark_1 px-4 py-2"
+              >
+                Send Request
+              </Button>
+            </div>
+          </div>
+        </Modal>
       )}
     </div>
   );
