@@ -199,15 +199,12 @@ export default function AllRides() {
     }
 
     // Check if any required fields are missing
+    // ! TODO: temporarily removed origin and dest
     if (
       !capacity ||
-      !origin ||
-      !dest ||
       !date ||
       !time ||
       capacity === "" ||
-      origin === "" ||
-      dest === "" ||
       date === "" ||
       !parsedDate.isValid() ||
       !parsedTime.isValid()
@@ -243,8 +240,8 @@ export default function AllRides() {
         },
         body: JSON.stringify({
           capacity: capacity["label"],
-          origin: origin,
-          destination: dest,
+          origin: { name: "Default Origin", formatted_address: "Default Origin", place_id: "temp_origin" },     // ! TODO: temporarily changed origin and dest
+          destination: { name: "Default Destination", formatted_address: "Default Destination", place_id: "temp_dest" },
           arrival_time: arrival_time_iso,
           leave_by_time: leave_by_time_formatted,
           phone_number: phoneNumber || null,
