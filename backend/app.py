@@ -228,6 +228,8 @@ def addride():
         origin: a dictionary containing the origin location
         dest: a dictionary containing the destination location
         arrival_time: a datetime object with the arrival date & time
+        leave_by_time (optional): time to leave origin
+        phone_number (optional): contact phone number
         note (optional): note with the rideshare
 
     Returns:
@@ -242,6 +244,8 @@ def addride():
     dest_obj = data.get("destination")
 
     note = data.get("note")
+    leave_by_time = data.get("leave_by_time")
+    phone_number = data.get("phone_number")
 
     origin_addr = origin_obj["formatted_address"]
     origin_name = origin_obj["name"]
@@ -270,6 +274,8 @@ def addride():
             dest_json,
             arrival_time,
             note,
+            leave_by_time,
+            phone_number,
         )
         return jsonify({"success": True, "message": "Rideshare successfully created!"})
     except:
@@ -742,4 +748,4 @@ if __name__ == "__main__":
     debug = FLASK_ENV == "development"
     if not app._got_first_request:
         database.database_setup()
-    app.run(host="0.0.0.0", port=5000, debug=debug)
+    app.run(host="0.0.0.0", port=5005, debug=debug)

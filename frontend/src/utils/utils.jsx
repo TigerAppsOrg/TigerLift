@@ -80,11 +80,16 @@ export const renderRideCardInfo = (ride) => {
     <>
       <div className="flex flex-col gap-2">
         {renderToAndFrom(ride)}
-        <p className="mt-2 mb-1 text-center">
+        <div className="flex flex-row gap-2 mt-2 mb-1 justify-center items-center">
+          {ride.leave_by_time && (
+            <span className="px-3 py-1 bg-zinc-200 rounded-full whitespace-nowrap">
+              Leave by: {ride.leave_by_time}
+            </span>
+          )}
           <span className="px-3 py-1 bg-zinc-200 rounded-full whitespace-nowrap">
             Arrives by {getFormattedDate(new Date(ride.arrival_time))}
           </span>
-        </p>
+        </div>
       </div>
       <hr className="border-1 my-3 border-theme_medium_1" />
       <p>
@@ -96,6 +101,11 @@ export const renderRideCardInfo = (ride) => {
           className="inline-flex text-theme_medium_2 hover:text-theme_dark_2 ml-1 mb-0.5 align-middle"
         />
       </p>
+      {ride.phone_number && (
+        <p>
+          <span className="font-semibold">Phone:</span> {ride.phone_number}
+        </p>
+      )}
       <p>
         <span className="font-semibold">Seats Taken:</span>{" "}
         {ride.current_riders.length}/{ride.max_capacity}
