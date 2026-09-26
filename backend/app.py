@@ -742,4 +742,6 @@ if __name__ == "__main__":
     debug = FLASK_ENV == "development"
     if not app._got_first_request:
         database.database_setup()
-    app.run(host="0.0.0.0", port=5000, debug=debug)
+    # 5001 avoids macOS AirPlay Receiver, which occupies port 5000
+    port = int(os.environ.get("PORT", 5001))
+    app.run(host="0.0.0.0", port=port, debug=debug)
