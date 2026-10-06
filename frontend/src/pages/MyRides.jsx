@@ -23,6 +23,7 @@ import {
   renderToAndFrom,
   renderRideNote,
   bigButtonStyling1,
+  getGoogleCalendarUrl,
 } from "../utils/utils";
 
 // For parsing date
@@ -486,6 +487,18 @@ export default function MyRides() {
           >
             <div>
               {renderRideCardInfo(ride)}
+              {isUpcoming &&
+                (viewType === "posted" ||
+                  ride.request_status === "accepted") && (
+                  <a
+                    href={getGoogleCalendarUrl(ride)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-block my-1 text-theme_medium_2 hover:text-theme_dark_2 underline"
+                  >
+                    Add to Google Calendar
+                  </a>
+                )}
               {viewType === "posted" && (
                 <div>
                   <p>
