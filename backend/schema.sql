@@ -9,8 +9,9 @@ CREATE TABLE Rides (
     arrival_time TIMESTAMP NOT NULL,
     creation_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    current_riders TEXT[][]
-    note VARCHAR(250)
+    current_riders TEXT[][],
+    note VARCHAR(300),
+    phone_number VARCHAR(20)
 );
 
 CREATE TABLE IF NOT EXISTS RideRequests (

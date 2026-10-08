@@ -67,6 +67,53 @@ def database_setup():
     else:
         print("Connection not established.")
 
+    run_migrations()
+
+
+def run_migrations():
+    """
+    Applies any .sql files in backend/migrations that haven't been run yet,
+    in filename order. Applied files are recorded in SchemaMigrations.
+    """
+    migrations_dir = os.path.join(os.path.dirname(__file__), "migrations")
+    filenames = sorted(f for f in os.listdir(migrations_dir) if f.endswith(".sql"))
+
+    conn = connect()
+
+    if conn:
+        try:
+            with conn.cursor() as cursor:
+                cursor.execute(
+                    """
+                    CREATE TABLE IF NOT EXISTS SchemaMigrations (
+                        filename TEXT PRIMARY KEY,
+                        applied_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    );
+                    """
+                )
+                cursor.execute("SELECT filename FROM SchemaMigrations;")
+                applied = {row[0] for row in cursor.fetchall()}
+
+                for filename in filenames:
+                    if filename in applied:
+                        continue
+                    with open(os.path.join(migrations_dir, filename)) as f:
+                        cursor.execute(f.read())
+                    cursor.execute(
+                        "INSERT INTO SchemaMigrations (filename) VALUES (%s);",
+                        (filename,),
+                    )
+                    print(f"Applied migration {filename}")
+
+                conn.commit()
+        except Exception as e:
+            conn.rollback()
+            print(f"Error running migrations: {e}")
+        finally:
+            conn.close()
+    else:
+        print("Connection not established.")
+
 
 def connect():
     """
@@ -90,6 +137,7 @@ def create_ride(
     destination,
     arrival_time,
     note="",
+    phone_number=None,
 ):
     """
     Adds a ride to the Rides database
@@ -99,8 +147,8 @@ def create_ride(
 
     sql_command = f"""
         INSERT INTO Rides (admin_netid, admin_name, admin_email, max_capacity, current_riders,
-        origin_dict, destination_dict, arrival_time, note, updated_at) VALUES (%s, %s, %s, %s, 
-        %s, %s, %s, %s, %s, CURRENT_TIMESTAMP);   
+        origin_dict, destination_dict, arrival_time, note, phone_number, updated_at) VALUES (%s, %s, %s, %s, 
+        %s, %s, %s, %s, %s, %s, CURRENT_TIMESTAMP);   
     """
 
     values = (
@@ -113,6 +161,7 @@ def create_ride(
         destination,
         arrival_time,
         note,
+        phone_number,
     )
 
     conn = connect()
@@ -288,7 +337,8 @@ def get_users_rides(netid):
                     WHEN RideRequests.netid IS NULL THEN NULL 
                     ELSE ARRAY[RideRequests.netid, RideRequests.full_name, RideRequests.mail]
                 END
-            ) FILTER (WHERE RideRequests.netid IS NOT NULL), ARRAY[]::text[][]) AS riderequesters
+            ) FILTER (WHERE RideRequests.netid IS NOT NULL), ARRAY[]::text[][]) AS riderequesters,
+            Rides.phone_number
         FROM 
             Rides 
         LEFT JOIN 
@@ -307,7 +357,8 @@ def get_users_rides(netid):
             Rides.creation_time, 
             Rides.updated_at, 
             Rides.note,
-            Rides.current_riders;
+            Rides.current_riders,
+            Rides.phone_number;
     """
 
     values = (str(netid),)
@@ -418,7 +469,7 @@ def get_users_requested_rides(netid):
     sql_command = """
         SELECT Rides.id, admin_netid, admin_name, admin_email, max_capacity, origin_dict, destination_dict, 
             arrival_time, creation_time, updated_at, note, 
-            current_riders, RideRequests.status as ride_request_status
+            current_riders, RideRequests.status as ride_request_status, phone_number
         FROM Rides
         JOIN RideRequests ON Rides.id = RideRequests.ride_id
         WHERE RideRequests.netid = %s;
