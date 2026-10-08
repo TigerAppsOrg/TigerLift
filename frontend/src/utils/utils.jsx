@@ -125,3 +125,27 @@ export const flipFields = (
     destinationRef.current.value = tempOriginValue;
   }
 };
+
+// builds a Google Calendar prefilled event link for a ride (no API needed)
+// event ends at the ride's arrival time and starts one hour before
+export const getGoogleCalendarUrl = (ride) => {
+  const toGoogleDate = (date) =>
+    date.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "");
+  const end = new Date(ride.arrival_time);
+  const start = new Date(end.getTime() - 60 * 60 * 1000);
+  const riderNames = [
+    ride.admin_name,
+    ...(ride.current_riders || []).map((rider) => rider[1]),
+  ];
+  const details = `Riders: ${riderNames.join(", ")}\n\nRide page: ${
+    window.location.origin
+  }/myrides`;
+  const params = new URLSearchParams({
+    action: "TEMPLATE",
+    text: `Rideshare to ${ride.destination["name"]}`,
+    dates: `${toGoogleDate(start)}/${toGoogleDate(end)}`,
+    location: `${ride.origin["name"]}, ${ride.origin["address"]}`,
+    details: details,
+  });
+  return `https://calendar.google.com/calendar/render?${params.toString()}`;
+};
