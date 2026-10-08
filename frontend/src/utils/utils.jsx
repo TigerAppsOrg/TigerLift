@@ -1,6 +1,21 @@
 import CopyEmailButton from "../components/CopyEmailButton";
 
 export const MAX_CAPACITY = 5;
+export const NOTE_MAX_LENGTH = 300;
+
+// Strips formatting from a US phone number; returns the 10 digits, or null if
+// invalid. Mirrors normalize_phone_number in backend/app.py.
+export const normalizePhoneNumber = (phoneNumber) => {
+  let digits = phoneNumber.replace(/\D/g, "");
+  if (digits.length === 11 && digits[0] === "1") digits = digits.slice(1);
+  if (digits.length !== 10 || "01".includes(digits[0]) || "01".includes(digits[3]))
+    return null;
+  return digits;
+};
+
+// Formats 10 stored digits as (609) 555-1234
+export const formatPhoneNumber = (digits) =>
+  `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`;
 
 // used in arrival time in ride cards
 export const getFormattedDate = (date) => {
@@ -75,7 +90,7 @@ export const renderRideNote = (ride) => {
 };
 
 // used in AllRides and MyRides to render ride card info
-export const renderRideCardInfo = (ride) => {
+export const renderRideCardInfo = (ride, { showRiders = false } = {}) => {
   return (
     <>
       <div className="flex flex-col gap-2">
@@ -100,6 +115,27 @@ export const renderRideCardInfo = (ride) => {
         <span className="font-semibold">Seats Taken:</span>{" "}
         {ride.current_riders.length}/{ride.max_capacity}
       </p>
+      {showRiders && (
+        <p>
+          <span className="font-semibold">Riders:</span>{" "}
+          {ride.current_riders.length > 0 ? (
+            ride.current_riders.map((rider) => rider[1]).join(", ")
+          ) : (
+            <span className="text-zinc-500">No riders yet</span>
+          )}
+        </p>
+      )}
+      {ride.phone_number && (
+        <p>
+          <span className="font-semibold">Phone:</span>{" "}
+          <a
+            href={`tel:+1${ride.phone_number}`}
+            className="text-theme_medium_2 hover:text-theme_dark_2"
+          >
+            {formatPhoneNumber(ride.phone_number)}
+          </a>
+        </p>
+      )}
       {renderRideNote(ride)}
     </>
   );

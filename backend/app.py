@@ -16,6 +16,8 @@ app.secret_key = os.environ.get("APP_SECRET_KEY")
 _cas = CASClient()
 
 FLASK_ENV = os.environ.get("FLASK_ENV", "development")
+
+NOTE_MAX_LENGTH = 300
 FRONTEND_URL = "" if FLASK_ENV == "production" else "http://localhost:5173"
 
 # FOR TESTING -- change to False if you don't want emails sent
@@ -166,6 +168,7 @@ def get_my_rides():
             "note": ride[10],
             "current_riders": ride[11],
             "requested_riders": ride[12],
+            "phone_number": ride[13],
         }
 
         if updated_ride["arrival_time"] > current_time:
@@ -191,6 +194,8 @@ def get_my_rides():
             "note": ride[10],
             "current_riders": ride[11],
             "request_status": ride[12],
+            # only accepted riders get the poster's phone number
+            "phone_number": ride[13] if ride[12] == "accepted" else None,
         }
 
         if updated_ride["arrival_time"] > current_time:
@@ -228,11 +233,12 @@ def addride():
         origin: a dictionary containing the origin location
         dest: a dictionary containing the destination location
         arrival_time: a datetime object with the arrival date & time
+        phone_number: the poster's US phone number, shown to accepted riders
         note (optional): note with the rideshare
 
     Returns:
         JSON: a success message
-        400: if unable to create rideshare
+        400: if the phone number or note is invalid, or unable to create rideshare
     """
     user_info = _cas.authenticate()
     data = request.get_json()
@@ -241,7 +247,26 @@ def addride():
     origin_obj = data.get("origin")
     dest_obj = data.get("destination")
 
-    note = data.get("note")
+    note = (data.get("note") or "").strip()
+    if len(note) > NOTE_MAX_LENGTH:
+        return (
+            jsonify(
+                {
+                    "success": False,
+                    "message": f"Note must be {NOTE_MAX_LENGTH} characters or fewer.",
+                }
+            ),
+            400,
+        )
+
+    phone_number = normalize_phone_number(data.get("phone_number"))
+    if not phone_number:
+        return (
+            jsonify(
+                {"success": False, "message": "Please enter a valid 10-digit phone number."}
+            ),
+            400,
+        )
 
     origin_addr = origin_obj["formatted_address"]
     origin_name = origin_obj["name"]
@@ -270,6 +295,7 @@ def addride():
             dest_json,
             arrival_time,
             note,
+            phone_number,
         )
         return jsonify({"success": True, "message": "Rideshare successfully created!"})
     except:
@@ -277,6 +303,26 @@ def addride():
             jsonify({"success": False, "message": "Failed to create rideshare."}),
             400,
         )
+
+
+def normalize_phone_number(phone_number):
+    """
+    Strips formatting from a US phone number.
+
+    Returns:
+        str: the 10 digits, or None if it isn't a valid US number
+    """
+    if not isinstance(phone_number, str):
+        return None
+
+    digits = "".join(c for c in phone_number if c.isdigit())
+    if len(digits) == 11 and digits[0] == "1":
+        digits = digits[1:]
+
+    # US area codes and exchanges can't start with 0 or 1
+    if len(digits) != 10 or digits[0] in "01" or digits[3] in "01":
+        return None
+    return digits
 
 
 @app.route("/api/deleteride", methods=["POST"])
