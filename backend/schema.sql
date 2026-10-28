@@ -19,9 +19,10 @@ CREATE TABLE IF NOT EXISTS RideRequests (
     full_name TEXT,
     mail VARCHAR(30),
     ride_id INTEGER REFERENCES Rides(id),
-    status VARCHAR(20) CHECK (status IN ('pending', 'accepted', 'rejected')) NOT NULL,
+    status VARCHAR(20) CHECK (status IN ('pending', 'accepted', 'rejected', 'removed')) NOT NULL,
     request_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    response_time TIMESTAMP
+    response_time TIMESTAMP,
+    note VARCHAR(300)
 );
 
 CREATE TABLE IF NOT EXISTS Notifications (
@@ -29,5 +30,6 @@ CREATE TABLE IF NOT EXISTS Notifications (
     netid VARCHAR(20),
     subject TEXT NOT NULL,
     message TEXT NOT NULL,
-    notification_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    notification_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    status VARCHAR(10)
 );    
