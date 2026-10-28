@@ -11,6 +11,8 @@ export default function Button({
     buttonStyling = "px-3 rounded-full bg-theme_light_2 text-theme_dark_2";
   } else if (status === "rejected") {
     buttonStyling = "px-3 rounded-full bg-red-100 text-red-500";
+  } else if (status === "removed") {
+    buttonStyling = "px-3 rounded-full bg-zinc-200 text-zinc-600";
   } else if (status === "accepted") {
     buttonStyling =
       "px-3 rounded-full bg-theme_light_green text-theme_dark_green";

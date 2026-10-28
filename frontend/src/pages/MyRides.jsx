@@ -14,6 +14,7 @@ import CustomTextArea from "../components/TextArea";
 import CopyEmailButton from "../components/CopyEmailButton";
 import PopUpMessage from "../components/PopUpMessage";
 import LoadingIcon from "../components/LoadingIcon";
+import useAutoRefresh from "../utils/useAutoRefresh";
 import {
   getFormattedDate,
   MAX_CAPACITY,
@@ -97,6 +98,9 @@ export default function MyRides() {
       console.error("Error fetching rides:", error);
     }
   };
+
+  // pick up changes made by other users, e.g. the poster removing this rider
+  useAutoRefresh(fetchMyRidesData);
 
   // load rides data
   useEffect(() => {
@@ -809,11 +813,18 @@ export default function MyRides() {
                 {Array.isArray(modalRequestedRiders) &&
                 modalRequestedRiders.length > 0 ? (
                   modalRequestedRiders.map((requested_rider, index) => {
-                    const [netid, fullName, email] = requested_rider;
+                    const [netid, fullName, email, note] = requested_rider;
                     return (
                       <Pill email={email} key={index}>
-                        <div className="flex justify-between items-center">
-                          <div>{`${fullName}`}</div>
+                        <div className="flex justify-between items-center gap-2">
+                          <div className="flex flex-col">
+                            <span>{`${fullName}`}</span>
+                            {note && (
+                              <span className="text-sm text-zinc-600 break-words">
+                                “{note}”
+                              </span>
+                            )}
+                          </div>
                           <div className="flex items-center gap-2">
                             <IconButton
                               type="checkmark"

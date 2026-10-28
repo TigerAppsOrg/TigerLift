@@ -12,6 +12,7 @@ export default function NotificationsModal({
   past_notifs,
   handleReadNotif,
   markAllRead,
+  clearAll,
 }) {
   const navigate = useNavigate();
 
@@ -39,10 +40,15 @@ export default function NotificationsModal({
     }
   };
 
+  // "ride_request" covers everything sent to a poster about their own ride
+  // (new and canceled requests); it links to My Posted Rides.
   const getNotifType = (notif) => {
     if (notif.subject.includes("accepted")) {
       return "ride_accept";
-    } else if (notif.subject.includes("requested to join")) {
+    } else if (
+      notif.subject.includes("requested to join") ||
+      notif.subject.includes("canceled their request")
+    ) {
       return "ride_request";
     } else if (notif.subject.includes("canceled")) {
       return "ride_cancellation";
@@ -133,6 +139,12 @@ export default function NotificationsModal({
               className="text-theme_medium_2 hover:text-theme_dark_2 text-sm py-0 px-0 mt-0.5"
             >
               Mark All As Read
+            </Button>
+            <Button
+              onClick={clearAll}
+              className="text-theme_medium_2 hover:text-theme_dark_2 text-sm py-0 px-0 mt-0.5"
+            >
+              Clear
             </Button>
           </h2>
           <IconButton
