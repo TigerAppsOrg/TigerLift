@@ -75,21 +75,9 @@ export default function NotificationsModal({
                   <p>{notification.message}</p>
                   <Button
                     className="text-theme_medium_2 hover:text-theme_dark_2 !text-sm"
-                    onClick={
-                      getNotifType(notification) === "ride_request"
-                        ? () =>
-                            navigate("/myrides", {
-                              state: { viewType: "posted" },
-                            })
-                        : () =>
-                            navigate("/myrides", {
-                              state: { viewType: "requested" },
-                            })
-                    }
+                    onClick={() => navigate("/myrides")}
                   >
-                    {getNotifType(notification) === "ride_request"
-                      ? "Go to My Posted Rides"
-                      : "Go to My Requested Rides"}
+                    Go to My Rideshares
                   </Button>
                   <p className="text-sm text-zinc-500">
                     {new Date(notification.notification_time).toLocaleString(
