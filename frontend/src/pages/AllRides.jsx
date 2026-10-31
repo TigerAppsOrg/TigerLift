@@ -20,6 +20,8 @@ import {
   capitalizeFirstLetter,
   handleShowPopupMessage,
   renderRideCardInfo,
+  renderToAndFrom,
+  placeToLocation,
   bigButtonStyling1,
   flipFields,
 } from "../utils/utils";
@@ -670,6 +672,15 @@ export default function AllRides() {
                     ref={destinationRef}
                   />
                 </div>
+                {/* preview so riders can confirm e.g. PHL vs EWR before posting */}
+                {origin?.formatted_address && dest?.formatted_address && (
+                  <div className="mt-3 py-2 rounded-lg bg-zinc-100">
+                    {renderToAndFrom({
+                      origin: placeToLocation(origin),
+                      destination: placeToLocation(dest),
+                    })}
+                  </div>
+                )}
               </div>
               <div>
                 <p className="font-medium mb-1">Arrival Time (in ET)</p>
@@ -693,7 +704,7 @@ export default function AllRides() {
               </div>
             </div>
             <Button
-              className="self-start bg-theme_dark_1 py-1.5 px-3 text-white hover:bg-theme_medium_1"
+              className="self-end bg-theme_dark_1 py-1.5 px-3 text-white hover:bg-theme_medium_1"
               onClick={checkCreateRideParams}
               loading={isCreatingRide}
             >

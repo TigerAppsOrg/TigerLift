@@ -14,8 +14,6 @@ export default function Navbar({ user_info }) {
   const [isNotifsLoading, setIsNotifsLoading] = useState(false);
   const [newNotifications, setNewNotifications] = useState([]);
   const [pastNotifications, setPastNotifications] = useState([]);
-  const [isSubMenuOpen, setIsSubMenuOpen] = useState(false);
-  const [myRidesViewType, setMyRidesViewType] = useState("");
 
   useEffect(() => {
     if (isMobileMenuOpen) {
@@ -78,11 +76,7 @@ export default function Navbar({ user_info }) {
   };
 
   const handleReadNotif = async (notif, notif_type) => {
-    if (notif_type === "ride_request") {
-      navigate("/myrides", { state: { viewType: "posted" } });
-    } else {
-      navigate("/myrides", { state: { viewType: "requested" } });
-    }
+    navigate("/myrides");
     setShowNotificationsModal(false);
     if (notif.status !== "read") {
       try {
@@ -141,10 +135,7 @@ export default function Navbar({ user_info }) {
             <hr className="py-1" />
             <div className="flex flex-col gap-5">
               <button
-                onClick={() => {
-                  setMyRidesViewType("");
-                  navigateTo("/allrides");
-                }}
+                onClick={() => navigateTo("/allrides")}
                 className={`${
                   isActive("/allrides") ? "bg-theme_light_1 font-medium" : ""
                 } text-lg rounded-md py-3 hover:bg-theme_light_1`}
@@ -152,82 +143,13 @@ export default function Navbar({ user_info }) {
                 All Rideshares
               </button>
               <button
-                onClick={() => setIsSubMenuOpen(!isSubMenuOpen)}
+                onClick={() => navigateTo("/myrides")}
                 className={`${
                   isActive("/myrides") ? "bg-theme_light_1 font-medium" : ""
                 } text-lg rounded-md py-3 hover:bg-theme_light_1`}
               >
-                <div className="relative items-center">
-                  My Rideshares
-                  <div className="absolute right-4 top-1/2 -translate-y-1/2">
-                    {isSubMenuOpen ? (
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        strokeWidth={1.5}
-                        stroke="currentColor"
-                        className="size-6"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          d="m4.5 15.75 7.5-7.5 7.5 7.5"
-                        />
-                      </svg>
-                    ) : (
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        strokeWidth={1.5}
-                        stroke="currentColor"
-                        className="size-6"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          d="m19.5 8.25-7.5 7.5-7.5-7.5"
-                        />
-                      </svg>
-                    )}
-                  </div>
-                </div>
+                My Rideshares
               </button>
-              {isSubMenuOpen && (
-                <div className="flex flex-col gap-4 pl-8">
-                  <button
-                    onClick={() => {
-                      setIsMobileMenuOpen(false);
-                      setMyRidesViewType("posted");
-                      navigate("/myrides", { state: { viewType: "posted" } });
-                    }}
-                    className={`${
-                      isActive("/myrides") && myRidesViewType === "posted"
-                        ? "bg-theme_light_2 font-medium"
-                        : ""
-                    } text-lg rounded-md py-3 hover:bg-theme_light_2`}
-                  >
-                    My Posted Rideshares
-                  </button>
-                  <button
-                    onClick={() => {
-                      setIsMobileMenuOpen(false);
-                      setMyRidesViewType("requested");
-                      navigate("/myrides", {
-                        state: { viewType: "requested" },
-                      });
-                    }}
-                    className={`${
-                      isActive("/myrides") && myRidesViewType === "requested"
-                        ? "bg-theme_light_2 font-medium"
-                        : ""
-                    } text-lg rounded-md py-3 hover:bg-theme_light_2`}
-                  >
-                    My Requested Rideshares
-                  </button>
-                </div>
-              )}
             </div>
           </div>
           <div className="flex flex-col gap-4">
