@@ -506,18 +506,22 @@ def requestride():
 def batchupdateriderequest():
     """
     Handles managing rideshare operations -- acceping/rejecting
-    rideshare requests, removing rideshares, changing arrival time and/or,
-    capacity of a rideshare. Notifies riders of changes.
+    rideshare requests, removing rideshares, changing arrival time,
+    capacity, location and/or note of a rideshare. Notifies riders of changes.
 
     Parameters:
         rideid: a unique identifier for each rideshare
         changed_time (optional): the new rideshare arrival time
         new_capacity (optional): the new rideshare capacity
+        new_origin, new_destination (optional): the new rideshare location,
+            only allowed when the ride has no riders or pending requests
+        new_note (optional): the new rideshare note
         accepted_riders (optional): a list of accepted riders
 
     Returns:
         JSON: a success message
         400: if unable to perform the updates or send out email notifications
+        403: if the user does not own the rideshare
 
     """
 
@@ -526,6 +530,30 @@ def batchupdateriderequest():
     try:
         data = request.get_json()
         rideid = data.get("rideid")
+
+        lock_info = database.get_ride_admin_and_lock(rideid)
+        if not lock_info or lock_info[0] != user_info["netid"]:
+            return (
+                jsonify({"success": False, "message": "You can't edit this rideshare."}),
+                403,
+            )
+
+        new_origin = data.get("new_origin")
+        new_destination = data.get("new_destination")
+        new_note = data.get("new_note")
+        if new_origin or new_destination:
+            if lock_info[1]:
+                return (
+                    jsonify(
+                        {
+                            "success": False,
+                            "message": "Location can't change while the rideshare has riders or requests.",
+                        }
+                    ),
+                    400,
+                )
+            new_origin = to_location(new_origin)
+            new_destination = to_location(new_destination)
 
         changedTime = data.get("changedTime")
         formatted_arrival_time = data.get("formatted_arrival_time")
@@ -585,6 +613,12 @@ def batchupdateriderequest():
 
         if changedTime:
             database.update_arrival_time(rideid, new_arrival_time)
+
+        if new_origin:
+            database.update_location(rideid, Json(new_origin), Json(new_destination))
+
+        if new_note is not None:
+            database.update_note(rideid, new_note[:200])
 
         return jsonify({"success": True, "message": "Rideshare successfully updated!"})
     except:
@@ -678,6 +712,17 @@ def mark_all_as_read():
             ),
             400,
         )
+
+
+def to_location(location):
+    """
+    Keeps only the stored fields of a location dict, raising if any are missing.
+    """
+    return {
+        "address": str(location["address"]),
+        "name": str(location["name"]),
+        "id": str(location["id"]),
+    }
 
 
 def send_email_notification(netid, mail, subject, message):

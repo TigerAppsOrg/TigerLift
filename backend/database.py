@@ -264,6 +264,84 @@ def update_arrival_time(rideid, new_arrival_time):
             conn.close()
 
 
+def update_location(rideid, origin, destination):
+    """
+    Updates the origin and destination of a ride
+    """
+    sql_command = """
+        UPDATE Rides
+        SET origin_dict = %s, destination_dict = %s, updated_at = CURRENT_TIMESTAMP
+        WHERE id = %s;
+    """
+    values = (origin, destination, rideid)
+    conn = connect()
+    # if it was successful connection, execute SQL commands to database & commit
+    if conn:
+        try:
+            with conn.cursor() as cursor:
+                cursor.execute(sql_command, values)
+                conn.commit()
+                print("Ride location updated successfully!")
+        except Exception as e:
+            print(f"Error updating ride location: {e}")
+        finally:
+            conn.close()
+
+
+def update_note(rideid, note):
+    """
+    Updates the note of a ride
+    """
+    sql_command = """
+        UPDATE Rides
+        SET note = %s, updated_at = CURRENT_TIMESTAMP
+        WHERE id = %s;
+    """
+    values = (note, rideid)
+    conn = connect()
+    # if it was successful connection, execute SQL commands to database & commit
+    if conn:
+        try:
+            with conn.cursor() as cursor:
+                cursor.execute(sql_command, values)
+                conn.commit()
+                print("Ride note updated successfully!")
+        except Exception as e:
+            print(f"Error updating ride note: {e}")
+        finally:
+            conn.close()
+
+
+def get_ride_admin_and_lock(rideid):
+    """
+    Given a rideid, returns (admin_netid, is_locked), where is_locked is True
+    if the ride has any current riders or pending requests. Returns None if
+    the ride does not exist.
+    """
+    sql_command = """
+        SELECT admin_netid,
+            COALESCE(array_length(current_riders, 1), 0) > 0
+            OR EXISTS (
+                SELECT 1 FROM RideRequests
+                WHERE ride_id = Rides.id AND status = 'pending'
+            )
+        FROM Rides
+        WHERE id = %s;
+    """
+    result = None
+    conn = connect()
+    if conn:
+        try:
+            with conn.cursor() as cursor:
+                cursor.execute(sql_command, (rideid,))
+                result = cursor.fetchone()
+        except Exception as e:
+            print(f"Error retrieving ride lock info: {e}")
+        finally:
+            conn.close()
+    return result
+
+
 def get_users_rides(netid):
     """
     Get all of a user's rides from Rides database
