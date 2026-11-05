@@ -486,7 +486,9 @@ export default function MyRides() {
             secondaryButtonStatus={ride.request_status}
           >
             <div>
-              {renderRideCardInfo(ride)}
+              {renderRideCardInfo(ride, {
+                showRiders: viewType === "requested",
+              })}
               {isUpcoming &&
                 (viewType === "posted" ||
                   ride.request_status === "accepted") && (
