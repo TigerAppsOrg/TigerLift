@@ -11,6 +11,7 @@ import dayjs from "dayjs";
 import PopUpMessage from "../components/PopUpMessage.jsx";
 import LoadingIcon from "../components/LoadingIcon.jsx";
 import Autocomplete from "react-google-autocomplete";
+import { Input } from "antd";
 import CustomTextArea from "../components/TextArea.jsx";
 import WarningModal from "../components/WarningModal.jsx";
 import {
@@ -24,6 +25,8 @@ import {
   placeToLocation,
   bigButtonStyling1,
   flipFields,
+  NOTE_MAX_LENGTH,
+  normalizePhoneNumber,
 } from "../utils/utils";
 
 // Displaying and managing all upcoming Rideshares in the database
@@ -62,6 +65,7 @@ export default function AllRides() {
   const [date, setDate] = useState("");
   const [time, setTime] = useState("");
   const [rideNote, setRideNote] = useState("");
+  const [phoneNumber, setPhoneNumber] = useState("");
   const [isCreatingRide, setIsCreatingRide] = useState(false);
 
   // for searching functionality
@@ -203,6 +207,7 @@ export default function AllRides() {
       !dest ||
       !date ||
       !time ||
+      !phoneNumber.trim() ||
       capacity === "" ||
       origin === "" ||
       dest === "" ||
@@ -215,6 +220,13 @@ export default function AllRides() {
         "You must provide all fields to create a ride."
       );
       setShowValidationModal(true); // Show the validation modal if something missing
+      return;
+    }
+
+    if (!normalizePhoneNumber(phoneNumber)) {
+      setValidationModalTitle("Invalid Input");
+      setValidationModalMessage("Please enter a valid 10-digit phone number.");
+      setShowValidationModal(true);
       return;
     }
 
@@ -240,6 +252,7 @@ export default function AllRides() {
           destination: dest,
           arrival_time: arrival_time_iso,
           note: rideNote,
+          phone_number: phoneNumber,
         }),
       });
       const responseData = await response.json();
@@ -278,6 +291,7 @@ export default function AllRides() {
     setDate("");
     setTime("");
     setRideNote("");
+    setPhoneNumber("");
     originRef.current = null;
     destinationRef.current = null;
   };
@@ -599,7 +613,7 @@ export default function AllRides() {
                   buttonStatus={dashboardData.ridereqs[ride.id]}
                   buttonLoading={pendingRideId.includes(ride.id)}
                 >
-                  {renderRideCardInfo(ride)}
+                  {renderRideCardInfo(ride, { showRiders: true })}
                 </RideCard>
               ))}
             </div>
@@ -692,14 +706,26 @@ export default function AllRides() {
                 />
               </div>
               <div>
+                <p className="font-medium">Phone Number</p>
+                <p className="text-sm text-zinc-500 mb-1">
+                  Only shown to riders you accept
+                </p>
+                <Input
+                  type="tel"
+                  autoComplete="tel"
+                  placeholder="(609) 555-1234"
+                  value={phoneNumber}
+                  onChange={(e) => setPhoneNumber(e.target.value)}
+                  maxLength={20}
+                />
+              </div>
+              <div>
                 <p className="font-medium mb-1">Optional Note to Riders</p>
                 <CustomTextArea
-                  placeholder={
-                    "Add an optional note here, such as a suggested time to meet up, if you're flexible with the arrival time, or anything else. (Max 200 characters)."
-                  }
+                  placeholder={`Add an optional note here, such as a suggested time to meet up, if you're flexible with the arrival time, or anything else. (Max ${NOTE_MAX_LENGTH} characters).`}
                   inputValue={rideNote}
                   setInputValue={setRideNote}
-                  maxLength={200}
+                  maxLength={NOTE_MAX_LENGTH}
                 />
               </div>
             </div>

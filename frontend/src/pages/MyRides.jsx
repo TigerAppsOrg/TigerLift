@@ -238,7 +238,7 @@ export default function MyRides() {
       >
         <div>
           {renderKindLabel(ride.kind)}
-          {renderRideCardInfo(ride)}
+          {renderRideCardInfo(ride, { showRiders: !isPosted })}
           {isUpcoming && (isPosted || ride.request_status === "accepted") && (
             <a
               href={getGoogleCalendarUrl(ride)}
