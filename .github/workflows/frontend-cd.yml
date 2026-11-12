@@ -5,6 +5,10 @@ on:
         branches:
             - main
 
+permissions:
+    contents: write
+    pull-requests: write
+
 jobs:
     build:
         runs-on: ubuntu-latest
@@ -20,10 +24,21 @@ jobs:
                 npm run build
               env:
                 VITE_GOOGLE_API_KEY: ${{ secrets.VITE_GOOGLE_API_KEY }}
-            - name: Commit build
+            - name: Open a pull request for the build
+              env:
+                GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
               run: |
-                git config --global user.email "github-actions@github.com"
-                git config --global user.name "GitHub Actions"
+                git config user.email "github-actions@github.com"
+                git config user.name "GitHub Actions"
                 git add frontend/dist
-                git commit -m "Build frontend" || echo "No changes to commit"
-                git push
+                if git diff --cached --quiet; then
+                  echo "No frontend changes to publish"
+                  exit 0
+                fi
+                git commit -m "Build frontend"
+                git push --force origin HEAD:frontend-dist-build
+                if gh pr view frontend-dist-build --json number --jq .number >/dev/null 2>&1; then
+                  echo "Updated the open frontend build pull request"
+                else
+                  gh pr create --base main --head frontend-dist-build --title "Build frontend" --body "Publishes the frontend/dist build from main. The live site serves these files, and main only accepts them through a pull request."
+                fi
