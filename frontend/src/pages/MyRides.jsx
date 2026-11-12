@@ -10,6 +10,7 @@ import dayjs from "dayjs";
 import CopyEmailButton from "../components/CopyEmailButton";
 import PopUpMessage from "../components/PopUpMessage";
 import LoadingIcon from "../components/LoadingIcon";
+import useAutoRefresh from "../utils/useAutoRefresh";
 import {
   capitalizeFirstLetter,
   handleShowPopupMessage,
@@ -77,6 +78,9 @@ export default function MyRides() {
       console.error("Error fetching rides:", error);
     }
   };
+
+  // pick up changes made by other users, e.g. the poster removing this rider
+  useAutoRefresh(fetchMyRidesData);
 
   // load rides data, including when navigated to again from notifications
   useEffect(() => {

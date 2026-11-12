@@ -36,9 +36,10 @@ def database_setup():
             full_name TEXT,
             mail VARCHAR(30),
             ride_id INTEGER REFERENCES Rides(id),
-            status VARCHAR(20) CHECK (status IN ('pending', 'accepted', 'rejected')) NOT NULL,
+            status VARCHAR(20) CHECK (status IN ('pending', 'accepted', 'rejected', 'removed')) NOT NULL,
             request_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            response_time TIMESTAMP
+            response_time TIMESTAMP,
+            note VARCHAR(300)
         );
 
         CREATE TABLE IF NOT EXISTS Notifications (
@@ -46,9 +47,17 @@ def database_setup():
             netid VARCHAR(20),
             subject TEXT NOT NULL,
             message TEXT NOT NULL,
-            notification_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            notification_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            status VARCHAR(10)
         );
-        
+
+        -- Bring existing databases up to date. Every statement here must be
+        -- safe to re-run, since this block runs on each startup.
+        ALTER TABLE Notifications ADD COLUMN IF NOT EXISTS status VARCHAR(10);
+        ALTER TABLE RideRequests ADD COLUMN IF NOT EXISTS note VARCHAR(300);
+        ALTER TABLE RideRequests DROP CONSTRAINT IF EXISTS riderequests_status_check;
+        ALTER TABLE RideRequests ADD CONSTRAINT riderequests_status_check
+            CHECK (status IN ('pending', 'accepted', 'rejected', 'removed'));
     """
     # Connect
     conn = connect()
@@ -218,40 +227,53 @@ def delete_ride(netid, ride_id):
         print("Connection not established.")
 
 
-def create_ride_request(netid, full_name, mail, ride_id):
-    """ "
-    Adds a ride request in the RidesRequest database
+def create_ride_request(netid, full_name, mail, ride_id, note=None):
+    """
+    Adds a pending ride request to RideRequests. A rider who was removed
+    from the ride may request again, which reopens their old request.
+
+    Returns True if a request was created or reopened, False if the rider
+    already has an active or rejected request for this ride.
     """
 
-    status = "pending"
-
-    sql_exists_check = """
-        SELECT 1 FROM RideRequests WHERE netid = %s AND ride_id = %s;
+    sql_existing = """
+        SELECT status FROM RideRequests WHERE netid = %s AND ride_id = %s;
     """
 
-    sql_command = f"""
-        INSERT INTO RideRequests (netid, full_name, mail, ride_id, status, request_time)
-        VALUES (%s, %s, %s, %s, %s, CURRENT_TIMESTAMP);
+    sql_insert = """
+        INSERT INTO RideRequests (netid, full_name, mail, ride_id, status, note, request_time)
+        VALUES (%s, %s, %s, %s, 'pending', %s, CURRENT_TIMESTAMP);
     """
 
-    values = (netid, full_name, mail, ride_id, status)
+    sql_reopen = """
+        UPDATE RideRequests
+        SET status = 'pending', note = %s, request_time = CURRENT_TIMESTAMP,
+            response_time = NULL
+        WHERE netid = %s AND ride_id = %s AND status = 'removed';
+    """
 
+    created = False
     conn = connect()
 
     # if it was successful connection, execute SQL commands to database & commit
     if conn:
         try:
             with conn.cursor() as cursor:
-                # check if exists
-                cursor.execute(sql_exists_check, (netid, ride_id))
-                if cursor.fetchone() is not None:
-                    print("Request already exists.")
-                    return
+                cursor.execute(sql_existing, (netid, ride_id))
+                existing = cursor.fetchone()
 
-                # else execute
-                cursor.execute(sql_command, values)
+                if existing is None:
+                    cursor.execute(sql_insert, (netid, full_name, mail, ride_id, note))
+                    created = True
+                elif existing[0] == "removed":
+                    cursor.execute(sql_reopen, (note, netid, ride_id))
+                    created = cursor.rowcount > 0
+                else:
+                    print("Request already exists.")
+
                 conn.commit()
-                print("Ride request addded successfully!")
+                if created:
+                    print("Ride request addded successfully!")
 
         except Exception as e:
             print(f"Error adding ride request: {e}")
@@ -259,6 +281,8 @@ def create_ride_request(netid, full_name, mail, ride_id):
             conn.close()
     else:
         print("Connection not established.")
+
+    return created
 
 
 def update_capacity(rideid, new_capacity):
@@ -413,7 +437,7 @@ def get_users_rides(netid):
             COALESCE(ARRAY_AGG(
                 CASE 
                     WHEN RideRequests.netid IS NULL THEN NULL 
-                    ELSE ARRAY[RideRequests.netid, RideRequests.full_name, RideRequests.mail]
+                    ELSE ARRAY[RideRequests.netid, RideRequests.full_name, RideRequests.mail, RideRequests.note]
                 END
             ) FILTER (WHERE RideRequests.netid IS NOT NULL), ARRAY[]::text[][]) AS riderequesters,
             Rides.phone_number
@@ -546,8 +570,8 @@ def get_users_requested_rides(netid):
 
     sql_command = """
         SELECT Rides.id, admin_netid, admin_name, admin_email, max_capacity, origin_dict, destination_dict, 
-            arrival_time, creation_time, updated_at, note, 
-            current_riders, RideRequests.status as ride_request_status, phone_number
+            arrival_time, creation_time, updated_at, Rides.note, 
+            current_riders, RideRequests.status as ride_request_status, Rides.phone_number
         FROM Rides
         JOIN RideRequests ON Rides.id = RideRequests.ride_id
         WHERE RideRequests.netid = %s;
@@ -575,14 +599,17 @@ def get_users_requested_rides(netid):
 
 def delete_ride_request(netid, ride_id):
     """
-    Deletes row with ride of ride_id & User of netid from RideRequests
+    Deletes a rider's pending request for ride_id (i.e. the rider cancels).
+
+    Returns True if a pending request was deleted.
     """
     sql_command = """
         DELETE FROM RideRequests
-        WHERE netid = %s AND ride_id = %s;
+        WHERE netid = %s AND ride_id = %s AND status = 'pending';
     """
 
     values = (str(netid), ride_id)
+    deleted = False
 
     conn = connect()
 
@@ -591,6 +618,7 @@ def delete_ride_request(netid, ride_id):
         try:
             with conn.cursor() as cursor:
                 cursor.execute(sql_command, values)
+                deleted = cursor.rowcount > 0
                 conn.commit()
                 print("RideRequest deleted successfully!")
         except Exception as e:
@@ -600,90 +628,85 @@ def delete_ride_request(netid, ride_id):
     else:
         print("Connection not established.")
 
+    return deleted
+
 
 def accept_ride_request(user_netid, full_name, mail, ride_id):
     """
-    Accepts a ride request and updates current_riders in Rides.
-    Returns False if user with user_netid already has a ride
-    request in that ride. Else returns True if new ride_request
-    is successfully created for user with
+    Accepts a pending ride request and adds the rider to current_riders.
+
+    Returns True if the request was newly accepted. Returns False if there is
+    no pending request (e.g. the rider is already accepted, or cancelled) or
+    the ride is already full.
     """
 
-    sql_command_check_status = """
-        SELECT status
-        FROM RideRequests
-        WHERE netid = %s AND ride_id = %s
+    sql_has_seat = """
+        SELECT 1 FROM Rides
+        WHERE id = %s AND COALESCE(array_length(current_riders, 1), 0) < max_capacity
+        FOR UPDATE;
     """
-    values_check_status = (user_netid, ride_id)
 
-    request_status = None
+    update_ride_requests_sql_command = """
+        UPDATE RideRequests
+        SET status = 'accepted', response_time = CURRENT_TIMESTAMP
+        WHERE netid = %s AND ride_id = %s AND status = 'pending';
+    """
+
+    update_rides_sql_command = """
+        UPDATE Rides
+        SET current_riders = array_cat(current_riders, ARRAY[ARRAY[%s, %s, %s]]),
+        updated_at = CURRENT_TIMESTAMP
+        WHERE id = %s;
+    """
+
+    accepted = False
     conn = connect()
 
+    # if it was successful connection, execute SQL commands to database & commit
     if conn:
         try:
             with conn.cursor() as cursor:
-                cursor.execute(sql_command_check_status, values_check_status)
-                result = cursor.fetchone()
-                if result:
-                    request_status = result[0]
-                    if request_status == "accepted":
-                        return False
+                # locks the ride row so two accepts can't both take the last seat
+                cursor.execute(sql_has_seat, (ride_id,))
+                if cursor.fetchone() is None:
+                    print("Ride is full; request not accepted.")
+                else:
+                    cursor.execute(update_ride_requests_sql_command, (user_netid, ride_id))
+                    if cursor.rowcount > 0:
+                        cursor.execute(
+                            update_rides_sql_command, (user_netid, full_name, mail, ride_id)
+                        )
+                        accepted = True
+                conn.commit()
+                if accepted:
+                    print("RideRequest accepted successfully!")
         except Exception as e:
-            print(f"Error checking ride request status: {e}")
+            conn.rollback()
+            print(f"Error accepting ride request: {e}")
         finally:
             conn.close()
+    else:
+        print("Connection not established.")
 
-    if request_status != "accepted":
-        update_ride_requests_sql_command = """
-            UPDATE RideRequests
-            SET status = 'accepted', response_time = CURRENT_TIMESTAMP
-            WHERE netid = %s AND ride_id = %s;
-            """
-
-        ride_request_values = (user_netid, ride_id)
-
-        update_rides_sql_command = """
-            UPDATE Rides
-            SET current_riders = array_cat(current_riders, ARRAY[ARRAY[%s, %s, %s]]), 
-            updated_at = CURRENT_TIMESTAMP
-            WHERE id = %s;
-        """
-
-        ride_values = (user_netid, full_name, mail, ride_id)
-
-        conn = connect()
-
-        # if it was successful connection, execute SQL commands to database & commit
-        if conn:
-            try:
-                with conn.cursor() as cursor:
-                    cursor.execute(
-                        update_ride_requests_sql_command, ride_request_values
-                    )
-                    cursor.execute(update_rides_sql_command, ride_values)
-                    conn.commit()
-                    print("RideRequest accepted successfully!")
-
-            except Exception as e:
-                print(f"Error accepting ride request: {e}")
-            finally:
-                conn.close()
-        else:
-            print("Connection not established.")
-    return True
+    return accepted
 
 
 def reject_ride_request(user_netid, ride_id):
     """
-    Rejects a ride request
+    Rejects a pending ride request. Also covers a rider the poster removed
+    and then rejected before saving, who is still 'accepted' at this point.
+
+    Returns the rider's email if the request was newly rejected, else None.
     """
     sql_command = """
         UPDATE RideRequests
         SET status = 'rejected', response_time = CURRENT_TIMESTAMP
-        WHERE netid = %s AND ride_id = %s AND status != 'rejected';
+        WHERE netid = %s AND ride_id = %s AND status IN ('pending', 'accepted')
+        RETURNING mail;
         """
 
     values = (user_netid, ride_id)
+    mail = None
 
     conn = connect()
 
@@ -692,15 +715,22 @@ def reject_ride_request(user_netid, ride_id):
         try:
             with conn.cursor() as cursor:
                 cursor.execute(sql_command, values)
+                row = cursor.fetchone()
                 conn.commit()
-                print("RideRequest rejected successfully!")
-            remove_from_current_riders(ride_id, user_netid)
+                if row:
+                    mail = row[0] or ""
+                    print("RideRequest rejected successfully!")
         except Exception as e:
             print(f"Error rejecting ride request: {e}")
         finally:
             conn.close()
+
+        if mail is not None:
+            remove_from_current_riders(ride_id, user_netid)
     else:
         print("Connection not established.")
+
+    return mail
 
 
 def get_all_my_ride_requests(netid):
@@ -762,17 +792,23 @@ def remove_from_current_riders(ride_id, requester_id):
         conn.close()
 
 
-def remove_rider(requester_id, full_name, mail, ride_id):
+def remove_rider(requester_id, ride_id):
     """
-    Rejects a ride request and moves it back into 'Manage Rides' as a pending ride request
+    Removes an accepted rider from a ride. Their request is marked 'removed',
+    which they see in My Rides, and they may request to join again.
+
+    Returns the rider's email if they were removed, else None (e.g. the
+    rider wasn't accepted).
     """
 
     sql_command_ride_requests = """
         UPDATE RideRequests
-        SET status = 'pending', response_time = CURRENT_TIMESTAMP
-        WHERE netid = %s AND ride_id = %s AND status = 'accepted';
+        SET status = 'removed', response_time = CURRENT_TIMESTAMP
+        WHERE netid = %s AND ride_id = %s AND status = 'accepted'
+        RETURNING mail;
         """
     values_ride_requests = (requester_id, ride_id)
+    mail = None
 
     conn = connect()
 
@@ -781,14 +817,22 @@ def remove_rider(requester_id, full_name, mail, ride_id):
         try:
             with conn.cursor() as cursor:
                 cursor.execute(sql_command_ride_requests, values_ride_requests)
+                row = cursor.fetchone()
                 conn.commit()
-                print("RideRequest removed into PENDING successfully!")
+                if row:
+                    mail = row[0] or ""
+                    print("RideRequest marked REMOVED successfully!")
         except Exception as e:
             print(f"Error removing ride request: {e}")
+        finally:
+            conn.close()
 
-        remove_from_current_riders(ride_id, requester_id)
+        if mail is not None:
+            remove_from_current_riders(ride_id, requester_id)
     else:
         print("Connection not established.")
+
+    return mail
 
 
 def rideid_to_admin_id_email(ride_id):
@@ -820,6 +864,58 @@ def rideid_to_admin_id_email(ride_id):
         print("Connection not established.")
 
     return (admin_netid_result, admin_mail_result) if admin_netid_result else None
+
+
+def get_pending_requests(ride_id):
+    """
+    Returns (netid, full_name, mail, note) for each pending request on a ride
+    """
+    sql_command = """
+        SELECT netid, full_name, mail, note FROM RideRequests
+        WHERE ride_id = %s AND status = 'pending'
+        ORDER BY request_time;
+    """
+
+    conn = connect()
+    if conn:
+        try:
+            with conn.cursor() as cursor:
+                cursor.execute(sql_command, (ride_id,))
+                return cursor.fetchall()
+        except Exception as e:
+            print(f"Error fetching pending requests: {e}")
+        finally:
+            conn.close()
+    else:
+        print("Connection not established.")
+    return []
+
+
+def get_ride_summary(ride_id):
+    """
+    Returns (admin_netid, admin_email, origin name, destination name,
+    arrival_time) for a ride, or None if it doesn't exist. Used for
+    notification text when the client doesn't send it.
+    """
+    sql_command = """
+        SELECT admin_netid, admin_email, origin_dict->>'name',
+            destination_dict->>'name', arrival_time
+        FROM Rides WHERE id = %s;
+    """
+
+    conn = connect()
+    if conn:
+        try:
+            with conn.cursor() as cursor:
+                cursor.execute(sql_command, (ride_id,))
+                return cursor.fetchone()
+        except Exception as e:
+            print(f"Error fetching ride summary: {e}")
+        finally:
+            conn.close()
+    else:
+        print("Connection not established.")
+    return None
 
 
 def get_user_notifs(netid):
@@ -930,6 +1026,35 @@ def read_all_users_notifications(netid):
                 return True
         except Exception as e:
             print(f"Error marking all notifications as read: {e}")
+            return None  # meaning error
+        finally:
+            conn.close()
+    else:
+        print("Failed to establish a database connection.")
+        return None
+
+
+def clear_all_users_notifications(netid):
+    """
+    Deletes all of a user's notifications
+    """
+    sql_command = """
+            DELETE FROM Notifications
+            WHERE netid = %s
+        """
+
+    values = (netid,)
+
+    conn = connect()
+    if conn:
+        try:
+            with conn.cursor() as cursor:
+                cursor.execute(sql_command, values)
+                conn.commit()
+                print("All notifications cleared successfully.")
+                return True
+        except Exception as e:
+            print(f"Error clearing notifications: {e}")
             return None  # meaning error
         finally:
             conn.close()

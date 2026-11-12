@@ -306,8 +306,15 @@ export default function RideEditor({ ride, onDone, onCancel }) {
           {requestedRiders.length > 0 ? (
             requestedRiders.map((rider) => (
               <Pill key={rider[0]}>
-                <div className="flex justify-between items-center">
-                  <div>{rider[1]}</div>
+                <div className="flex justify-between items-center gap-2">
+                  <div className="flex flex-col">
+                    <span>{rider[1]}</span>
+                    {rider[3] && (
+                      <span className="text-sm text-zinc-600 break-words">
+                        “{rider[3]}”
+                      </span>
+                    )}
+                  </div>
                   <div className="flex items-center gap-2">
                     <IconButton
                       type="checkmark"
