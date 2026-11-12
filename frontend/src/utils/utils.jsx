@@ -55,12 +55,79 @@ export const handleShowPopupMessage = (
   setTimeout(() => setPopupMessageInfo({ status: "", message: "" }), 1500);
 };
 
+// airports riders commonly travel to, matched against a location's name and
+// address. Each gets its own color so e.g. PHL and EWR are hard to confuse.
+// Zip codes are only used where they cover the airport alone.
+const AIRPORTS = [
+  {
+    code: "PHL",
+    city: "Philadelphia",
+    match: /philadelphia international airport|\bPHL\b/i,
+    className: "bg-emerald-100 text-emerald-900 border-emerald-400",
+  },
+  {
+    code: "EWR",
+    city: "Newark",
+    match: /newark liberty international airport|\bEWR\b|NJ 07114/i,
+    className: "bg-amber-100 text-amber-900 border-amber-400",
+  },
+  {
+    code: "JFK",
+    city: "New York JFK",
+    match: /kennedy international airport|NY 11430/i,
+    className: "bg-indigo-100 text-indigo-900 border-indigo-400",
+  },
+  {
+    code: "LGA",
+    city: "New York LaGuardia",
+    match: /laguardia airport|NY 11371/i,
+    className: "bg-cyan-100 text-cyan-900 border-cyan-400",
+  },
+  {
+    code: "TTN",
+    city: "Trenton",
+    match: /trenton[- ]mercer airport/i,
+    className: "bg-lime-100 text-lime-900 border-lime-500",
+  },
+];
+
+// returns the airport a location ({ name, address }) is at, or null
+export const getAirport = (location) => {
+  if (!location) return null;
+  const text = `${location.name || ""} ${location.address || ""}`;
+  return AIRPORTS.find((airport) => airport.match.test(text)) || null;
+};
+
+// a colored "✈ Philadelphia (PHL)" label for airport locations
+export const renderAirportBadge = (location) => {
+  const airport = getAirport(location);
+  return (
+    airport && (
+      <span
+        className={`inline-flex items-center gap-1 self-center px-2 py-0.5 my-1 rounded-full border text-sm font-semibold whitespace-nowrap ${airport.className}`}
+      >
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 24 24"
+          fill="currentColor"
+          className="size-4"
+          aria-hidden="true"
+        >
+          <path d="M21 16v-2l-8-5V3.5a1.5 1.5 0 0 0-3 0V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5l8 2.5z" />
+        </svg>
+        {airport.city} ({airport.code})
+      </span>
+    )
+  );
+};
+
 // the origin and destination formatting in ride cards
 export const renderToAndFrom = (ride) => {
   return (
     <p className="text-xl flex items-center justify-center gap-2">
       <span className="flex text-center flex-col">
         <strong>{ride.origin["name"]}</strong>
+        {renderAirportBadge(ride.origin)}
         <span className="text-sm">
           {ride.origin["address"].split(" ").slice(0, -2).join(" ")}
         </span>
@@ -68,6 +135,7 @@ export const renderToAndFrom = (ride) => {
       →
       <span className="flex text-center flex-col">
         <strong>{ride.destination["name"]}</strong>
+        {renderAirportBadge(ride.destination)}
         <span className="text-sm">
           {ride.destination["address"].split(" ").slice(0, -2).join(" ")}
         </span>
@@ -75,6 +143,13 @@ export const renderToAndFrom = (ride) => {
     </p>
   );
 };
+
+// converts a Google Places result into the { address, name, id } shape rides store
+export const placeToLocation = (place) => ({
+  address: place.formatted_address,
+  name: place.name,
+  id: place.place_id,
+});
 
 export const renderRideNote = (ride) => {
   return (
