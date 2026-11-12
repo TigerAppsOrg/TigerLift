@@ -70,6 +70,20 @@ npm run dev
 
 If `psycopg2` fails to install, run `source ~/.zshrc` and try `pip install` again. The app is at http://localhost:5173/. The backend uses http://localhost:5001/ because macOS AirPlay often takes port 5000. Princeton CAS login is still required to use the app.
 
+### Running backend tests
+
+The tests use a separate database, so they never touch your real data:
+
+```bash
+createdb tigerlift_test
+cd backend
+source .venv/bin/activate
+pip install -r requirements-dev.txt
+python -m pytest tests
+```
+
+To use a different test database, set `TEST_DATABASE_URL`.
+
 ### Deploying
 
 - `cd frontend` and run `npm run build`. This will create a `dist` folder in `frontend`.

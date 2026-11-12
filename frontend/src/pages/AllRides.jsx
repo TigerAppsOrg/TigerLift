@@ -14,6 +14,7 @@ import Autocomplete from "react-google-autocomplete";
 import { Input } from "antd";
 import CustomTextArea from "../components/TextArea.jsx";
 import WarningModal from "../components/WarningModal.jsx";
+import useAutoRefresh from "../utils/useAutoRefresh.js";
 import {
   getFormattedDate,
   MAX_CAPACITY,
@@ -76,6 +77,14 @@ export default function AllRides() {
   const [endSearchDate, setEndSearchDate] = useState();
   const [endSearchTime, setEndSearchTime] = useState();
   const [inSearch, setInSearch] = useState(false);
+
+  // for requesting to join a ride with an optional note
+  const [requestModalRide, setRequestModalRide] = useState(null);
+  const [requestNote, setRequestNote] = useState("");
+
+  // pending requests to join the user's own rides, shown above the rides list
+  const [pendingRequests, setPendingRequests] = useState([]);
+  const [respondingTo, setRespondingTo] = useState(null); // "rideid:netid" in progress
 
   // autocomplete options for location input
   const autocompleteOptions = {
@@ -310,12 +319,91 @@ export default function AllRides() {
     setLoading(false);
   };
 
+  // Fetch pending requests to join the user's upcoming posted rides
+  const fetchPendingRequests = async () => {
+    try {
+      const response = await fetch("/api/myrides");
+      if (!response.ok) {
+        throw new Error(`Error: ${response.statusText}`);
+      }
+      const data = await response.json();
+      setPendingRequests(
+        data.upcoming_posted_rides.flatMap((ride) =>
+          ride.requested_riders.map(([netid, fullName, mail, note]) => ({
+            ride,
+            netid,
+            fullName,
+            note,
+          }))
+        )
+      );
+    } catch (error) {
+      console.error("Error fetching pending requests:", error);
+    }
+  };
+
+  // Quietly refresh request statuses and pending requests, e.g. after another
+  // user accepts or removes this user. Leaves search results in place.
+  const refreshInBackground = async () => {
+    try {
+      const response = await fetch("/api/dashboard");
+      if (response.ok) {
+        const data = await response.json();
+        setDashboardData(data);
+        if (!inSearch) {
+          setRidesData(data.rides);
+        }
+      }
+    } catch (error) {
+      console.error("Error during fetch:", error);
+    }
+    await fetchPendingRequests();
+  };
+
+  useAutoRefresh(refreshInBackground);
+
+  // Accepts or rejects a pending request from the dashboard
+  const handleRespondToRequest = async (pendingRequest, action) => {
+    const key = `${pendingRequest.ride.id}:${pendingRequest.netid}`;
+    setRespondingTo(key);
+    try {
+      const response = await fetch("/api/respondtorequest", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          rideid: pendingRequest.ride.id,
+          requester_id: pendingRequest.netid,
+          action: action,
+        }),
+      });
+      const responseData = await response.json();
+      handleShowPopupMessage(
+        setPopupMessageInfo,
+        responseData.success,
+        responseData.message
+      );
+      await refreshInBackground();
+    } catch (error) {
+      console.error("Error during fetch:", error);
+    }
+    setRespondingTo(null);
+  };
+
+  // Opens the request popup, where the user can add a note to the poster
+  const openRequestModal = (ride) => {
+    setRequestNote("");
+    setRequestModalRide(ride);
+  };
+
   // Handles ride requests made by user
   const handleRideRequest = async (
     rideid,
     origin,
     destination,
-    arrival_time
+    arrival_time,
+    note = ""
   ) => {
     setPendingRideId((prev) => [...prev, rideid]); // track pending request by ID
     try {
@@ -333,8 +421,15 @@ export default function AllRides() {
           origin_name: origin["name"],
           destination_name: destination["name"],
           formatted_arrival_time: formattedArrivalTime,
+          note: note,
         }),
       });
+      const responseData = await response.json();
+      handleShowPopupMessage(
+        setPopupMessageInfo,
+        responseData.success,
+        responseData.message
+      );
       await fetchDashboardData(); // refresh dashboardData after requesting ride
       if (!response.ok) {
         console.error("Request failed:", response.status);
@@ -368,6 +463,7 @@ export default function AllRides() {
   };
 
   useEffect(() => {
+    fetchPendingRequests();
     if (isInitialRender.current) {
       isInitialRender.current = false;
       return;
@@ -567,6 +663,72 @@ export default function AllRides() {
         </div>
       </div>
 
+      {pendingRequests.length > 0 && (
+        <div className="mt-2 mb-6">
+          <h3 className="text-lg font-medium mb-3">
+            Requests to join your rideshares ({pendingRequests.length})
+          </h3>
+          <div className="flex flex-col gap-3">
+            {pendingRequests.map((pendingRequest) => {
+              const key = `${pendingRequest.ride.id}:${pendingRequest.netid}`;
+              const isFull =
+                pendingRequest.ride.current_riders.length >=
+                pendingRequest.ride.max_capacity;
+              return (
+                <div
+                  key={key}
+                  className="p-4 bg-white rounded-xl drop-shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-3"
+                >
+                  <div className="flex flex-col gap-1">
+                    <p>
+                      <span className="font-semibold">
+                        {pendingRequest.fullName}
+                      </span>{" "}
+                      wants to join your rideshare from{" "}
+                      <strong>{pendingRequest.ride.origin["name"]}</strong> to{" "}
+                      <strong>{pendingRequest.ride.destination["name"]}</strong>{" "}
+                      on {getFormattedDate(new Date(pendingRequest.ride.arrival_time))}
+                    </p>
+                    {pendingRequest.note && (
+                      <p className="py-1.5 px-3 bg-zinc-100 rounded-lg break-words">
+                        {pendingRequest.note}
+                      </p>
+                    )}
+                    {isFull && (
+                      <p className="text-sm text-zinc-500">
+                        This rideshare is full. Remove a rider or increase the
+                        capacity in My Rideshares to accept.
+                      </p>
+                    )}
+                  </div>
+                  <div className="flex gap-2 shrink-0">
+                    <Button
+                      className="bg-theme_green text-theme_dark_green hover:bg-theme_light_green"
+                      onClick={() =>
+                        handleRespondToRequest(pendingRequest, "accept")
+                      }
+                      loading={respondingTo === key}
+                      disabled={isFull}
+                    >
+                      Accept
+                    </Button>
+                    <Button
+                      className="bg-theme_red text-theme_dark_red hover:bg-theme_light_red"
+                      onClick={() =>
+                        handleRespondToRequest(pendingRequest, "reject")
+                      }
+                      loading={respondingTo === key}
+                    >
+                      Reject
+                    </Button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {loading ? (
         <LoadingIcon carColor="bg-theme_medium_2" />
       ) : (
@@ -576,49 +738,93 @@ export default function AllRides() {
           </h3>
           {ridesData.length > 0 ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-5">
-              {ridesData.map((ride) => (
-                <RideCard
-                  key={ride.id}
-                  buttonText={
-                    ride.admin_netid === dashboardData.user_info.netid
-                      ? ""
-                      : dashboardData.ridereqs[ride.id] !== undefined &&
-                        dashboardData.ridereqs[ride.id] !== null
-                      ? "Status: " +
-                        capitalizeFirstLetter(dashboardData.ridereqs[ride.id])
-                      : "Request to Join"
-                  }
-                  buttonOnClick={
-                    dashboardData.ridereqs[ride.id] ||
-                    ride.admin_netid === dashboardData.user_info.netid ||
-                    ride.current_riders.length === ride.max_capacity
-                      ? () => {}
-                      : () =>
-                          handleRideRequest(
-                            ride.id,
-                            ride.origin,
-                            ride.destination,
-                            ride.arrival_time
-                          )
-                  }
-                  buttonClassName={`${
-                    ride.admin_netid === dashboardData.user_info.netid
-                      ? "cursor-auto"
-                      : dashboardData.ridereqs[ride.id]
-                      ? "cursor-auto"
-                      : "bg-theme_medium_1 text-white hover:bg-theme_dark_1"
-                  }`}
-                  buttonStatus={dashboardData.ridereqs[ride.id]}
-                  buttonLoading={pendingRideId.includes(ride.id)}
-                >
-                  {renderRideCardInfo(ride, { showRiders: true })}
-                </RideCard>
-              ))}
+              {ridesData.map((ride) => {
+                const isOwnRide =
+                  ride.admin_netid === dashboardData.user_info.netid;
+                const requestStatus = dashboardData.ridereqs[ride.id];
+                const wasRemoved = requestStatus === "removed";
+                // removed riders can request again; other statuses are final
+                const canRequest =
+                  !isOwnRide &&
+                  (!requestStatus || wasRemoved) &&
+                  ride.current_riders.length < ride.max_capacity;
+                return (
+                  <RideCard
+                    key={ride.id}
+                    buttonText={
+                      isOwnRide
+                        ? ""
+                        : requestStatus && !wasRemoved
+                        ? "Status: " + capitalizeFirstLetter(requestStatus)
+                        : wasRemoved
+                        ? "Request Again"
+                        : "Request to Join"
+                    }
+                    buttonOnClick={
+                      canRequest ? () => openRequestModal(ride) : () => {}
+                    }
+                    buttonClassName={`${
+                      canRequest
+                        ? "bg-theme_medium_1 text-white hover:bg-theme_dark_1"
+                        : "cursor-auto"
+                    }`}
+                    buttonStatus={wasRemoved ? "" : requestStatus}
+                    buttonLoading={pendingRideId.includes(ride.id)}
+                    secondaryButtonText={wasRemoved && "Status: Removed"}
+                    secondaryButtonClassName="cursor-auto"
+                    secondaryButtonStatus={wasRemoved ? "removed" : ""}
+                  >
+                    {renderRideCardInfo(ride, { showRiders: true })}
+                  </RideCard>
+                );
+              })}
             </div>
           ) : (
             <p className="text-center">No rides available in this category.</p>
           )}
         </div>
+      )}
+      {requestModalRide && (
+        <Modal
+          isOpen={!!requestModalRide}
+          onClose={() => setRequestModalRide(null)}
+          title={"Request to Join"}
+        >
+          <div className="flex flex-col gap-4">
+            <p>
+              Request to join {requestModalRide.admin_name}'s rideshare from{" "}
+              <strong>{requestModalRide.origin["name"]}</strong> to{" "}
+              <strong>{requestModalRide.destination["name"]}</strong>.
+            </p>
+            <div>
+              <p className="font-medium mb-1">Optional Note to Poster</p>
+              <CustomTextArea
+                placeholder={
+                  "Add an optional note, such as how much luggage you have or if you're flexible with the time. (Max 300 characters)."
+                }
+                inputValue={requestNote}
+                setInputValue={setRequestNote}
+                maxLength={300}
+              />
+            </div>
+            <Button
+              className="self-start bg-theme_dark_1 py-1.5 px-3 text-white hover:bg-theme_medium_1"
+              onClick={() => {
+                const ride = requestModalRide;
+                setRequestModalRide(null);
+                handleRideRequest(
+                  ride.id,
+                  ride.origin,
+                  ride.destination,
+                  ride.arrival_time,
+                  requestNote
+                );
+              }}
+            >
+              Send Request
+            </Button>
+          </div>
+        </Modal>
       )}
       {createRideModal && (
         <Modal

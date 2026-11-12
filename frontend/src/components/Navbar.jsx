@@ -4,6 +4,7 @@ import IconButton from "./IconButton";
 import NotificationsModal from "./NotificationsModal";
 import CarIcon from "./CarIcon";
 import { bigButtonStyling2 } from "../utils/utils";
+import useAutoRefresh from "../utils/useAutoRefresh";
 
 export default function Navbar({ user_info }) {
   const location = useLocation();
@@ -32,8 +33,11 @@ export default function Navbar({ user_info }) {
 
   const isActive = (path) => location.pathname === path;
 
-  const fetchNotifs = async () => {
-    setIsNotifsLoading(true);
+  // silent: refresh without showing the loading icon (used for auto-refresh)
+  const fetchNotifs = async (silent = false) => {
+    if (!silent) {
+      setIsNotifsLoading(true);
+    }
     try {
       const response = await fetch("/api/notifications", {
         method: "GET",
@@ -65,9 +69,13 @@ export default function Navbar({ user_info }) {
       setIsNotifsLoading(false);
     } catch (error) {
       console.error("Error fetching notifications:", error);
-      alert("Failed to load notifications.");
+      if (!silent) {
+        alert("Failed to load notifications.");
+      }
     }
   };
+
+  useAutoRefresh(() => fetchNotifs(true));
 
   useEffect(() => {
     fetchNotifs();
@@ -102,6 +110,22 @@ export default function Navbar({ user_info }) {
       } catch (error) {
         console.error(error);
       }
+    }
+    await fetchNotifs();
+  };
+
+  const clearAllNotifs = async () => {
+    try {
+      const response = await fetch("/api/clearnotifications", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({}),
+      });
+      if (!response.ok) {
+        throw new Error(`Failed to clear notifications`);
+      }
+    } catch (error) {
+      console.error(error);
     }
     await fetchNotifs();
   };
@@ -249,6 +273,7 @@ export default function Navbar({ user_info }) {
         past_notifs={pastNotifications}
         handleReadNotif={handleReadNotif}
         markAllRead={markAllRead}
+        clearAll={clearAllNotifs}
       />
 
       <nav className="bg-theme_medium_2">

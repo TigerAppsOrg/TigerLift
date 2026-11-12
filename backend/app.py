@@ -9,6 +9,7 @@ import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from datetime import datetime, timezone
+from zoneinfo import ZoneInfo
 from psycopg2.extras import Json
 
 app = Flask(__name__, template_folder="../frontend", static_folder="../frontend/dist")
@@ -398,7 +399,33 @@ def cancelriderequest():
     data = request.get_json()
     rideid = data.get("rideid")
     try:
-        database.delete_ride_request(str(user_info["netid"]), rideid)
+        deleted = database.delete_ride_request(str(user_info["netid"]), rideid)
+        if not deleted:
+            return (
+                jsonify(
+                    {"success": False, "message": "No pending request to cancel."}
+                ),
+                400,
+            )
+
+        ride = database.get_ride_summary(rideid)
+        if ride:
+            admin_netid, admin_email, origin_name, destination_name, arrival_time = ride
+            subject = (
+                "🚗 " + user_info["displayname"] + " canceled their request to join your Rideshare"
+            )
+            message = (
+                user_info["displayname"]
+                + " canceled their request to join your Rideshare from "
+                + origin_name
+                + " to "
+                + destination_name
+                + " on "
+                + format_arrival_time(arrival_time)
+                + ".\n"
+            )
+            send_email_notification(admin_netid, admin_email, subject, message)
+
         return jsonify({"success": True, "message": "Rideshare request canceled."})
     except:
         return (
@@ -486,6 +513,70 @@ def searchrides():
     )
 
 
+REQUEST_NOTE_MAX_LENGTH = 300
+
+
+def format_arrival_time(arrival_time):
+    """
+    Formats a stored (UTC) arrival time in Eastern time for notification
+    text, e.g. "October 30, 2026, 3:00 PM".
+    """
+    eastern = arrival_time.replace(tzinfo=timezone.utc).astimezone(
+        ZoneInfo("America/New_York")
+    )
+    return eastern.strftime("%B %-d, %Y, %-I:%M %p")
+
+
+def accept_rider_and_notify(rideid, requester_id, full_name, mail, ride_text):
+    """
+    Accepts a pending request and notifies the rider.
+
+    Returns True if the rider was newly accepted.
+    """
+    accepted = database.accept_ride_request(requester_id, full_name, mail, rideid)
+    if accepted:
+        subject = "🚗 Your request to join a Rideshare was accepted!"
+        message = (
+            "Your request to join the Rideshare " + ride_text + " was recently accepted!\n"
+        )
+        send_email_notification(requester_id, mail, subject, message)
+    return accepted
+
+
+def reject_rider_and_notify(rideid, requester_id, ride_text):
+    """
+    Rejects a request and notifies the rider.
+
+    Returns True if the request was newly rejected.
+    """
+    mail = database.reject_ride_request(requester_id, rideid)
+    if mail is None:
+        return False
+    subject = "🚗 Your request to join a Rideshare was declined"
+    message = "Your request to join the Rideshare " + ride_text + " was declined.\n"
+    send_email_notification(requester_id, mail, subject, message)
+    return True
+
+
+def remove_rider_and_notify(rideid, requester_id, ride_text):
+    """
+    Removes an accepted rider and notifies them.
+
+    Returns True if the rider was removed.
+    """
+    mail = database.remove_rider(requester_id, rideid)
+    if mail is None:
+        return False
+    subject = "🚗 You were removed from a Rideshare"
+    message = (
+        "You were removed from the Rideshare "
+        + ride_text
+        + ". You can request to join again from the dashboard.\n"
+    )
+    send_email_notification(requester_id, mail, subject, message)
+    return True
+
+
 @app.route("/api/requestride", methods=["POST"])
 def requestride():
     """
@@ -505,16 +596,38 @@ def requestride():
     origin_name = data.get("origin_name")
     destination_name = data.get("destination_name")
     formatted_arrival_time = data.get("formatted_arrival_time")
+    note = (data.get("note") or "").strip()
     if not rideid:
         return jsonify({"success": False, "message": "Ride ID is required"}), 400
+    if len(note) > REQUEST_NOTE_MAX_LENGTH:
+        return (
+            jsonify(
+                {
+                    "success": False,
+                    "message": f"Note must be {REQUEST_NOTE_MAX_LENGTH} characters or fewer.",
+                }
+            ),
+            400,
+        )
 
     try:
-        database.create_ride_request(
+        created = database.create_ride_request(
             str(user_info["netid"]),
             str(user_info["displayname"]),
             str(user_info["mail"]),
             rideid,
+            note or None,
         )
+        if not created:
+            return (
+                jsonify(
+                    {
+                        "success": False,
+                        "message": "You already have a request for this rideshare.",
+                    }
+                ),
+                400,
+            )
 
         try:
             admin_info = database.rideid_to_admin_id_email(rideid)
@@ -531,6 +644,8 @@ def requestride():
                 + formatted_arrival_time
                 + "!\n"
             )
+            if note:
+                message += "Their note: " + note + "\n"
             send_email_notification(
                 str(admin_info[0]), str(admin_info[1]), subject, message
             )
@@ -592,42 +707,35 @@ def batchupdateriderequest():
             + ".\n"
         )
 
+        ride_text = (
+            "from "
+            + origin_name
+            + " to "
+            + destination_name
+            + " on "
+            + formatted_arrival_time
+        )
+
+        # update capacity first, so accepts below are checked against it
+        if capacity:
+            database.update_capacity(rideid, capacity)
+
         for rider in data.get("accepting_riders"):
             requester_id = rider.get("requester_id")
             full_name = rider.get("full_name")
             mail = rider.get("mail")
-            status = database.accept_ride_request(requester_id, full_name, mail, rideid)
-
-            # if status is True (meaning new ride request was created)
-            if status:
-                # send email to accepted rider
-                subject = "🚗 Your request to join a Rideshare was accepted!"
-                message = (
-                    "Your request to join the Rideshare from "
-                    + origin_name
-                    + " to "
-                    + destination_name
-                    + " on "
-                    + formatted_arrival_time
-                    + " was recently accepted!\n"
-                )
-                send_email_notification(requester_id, mail, subject, message)
+            accept_rider_and_notify(rideid, requester_id, full_name, mail, ride_text)
 
             if changedTime:
                 send_email_notification(requester_id, mail, time_subject, time_message)
 
         for rider in data.get("rejecting_riders"):
-            requester_id = rider.get("requester_id")
-            database.reject_ride_request(requester_id, rideid)
+            reject_rider_and_notify(rideid, rider.get("requester_id"), ride_text)
 
+        # The client sends everyone left in "Requests to Join", including riders
+        # the poster just removed; only previously accepted riders are affected.
         for rider in data.get("pending_riders"):
-            requester_id = rider.get("requester_id")
-            full_name = rider.get("full_name")
-            mail = rider.get("mail")
-            database.remove_rider(requester_id, full_name, mail, rideid)
-
-        if capacity:
-            database.update_capacity(rideid, capacity)
+            remove_rider_and_notify(rideid, rider.get("requester_id"), ride_text)
 
         if changedTime:
             database.update_arrival_time(rideid, new_arrival_time)
@@ -638,6 +746,83 @@ def batchupdateriderequest():
             jsonify({"success": False, "message": "Failed to update rideshare."}),
             400,
         )
+
+
+@app.route("/api/respondtorequest", methods=["POST"])
+def respondtorequest():
+    """
+    Accepts or rejects a single pending ride request. Used by the pending
+    requests list on the dashboard. Notifies the rider.
+
+    Parameters:
+        rideid: a unique identifier for each rideshare
+        requester_id: the netid of the rider who requested to join
+        action: "accept" or "reject"
+
+    Returns:
+        JSON: a success message
+        400: if the request is no longer pending, the ride is full, or
+             unable to update
+        403: if the user doesn't own the rideshare
+    """
+    user_info = _cas.authenticate()
+    data = request.get_json()
+    rideid = data.get("rideid")
+    requester_id = data.get("requester_id")
+    action = data.get("action")
+
+    if action not in ("accept", "reject") or not rideid or not requester_id:
+        return jsonify({"success": False, "message": "Invalid request."}), 400
+
+    ride = database.get_ride_summary(rideid)
+    if not ride or ride[0] != user_info["netid"]:
+        return (
+            jsonify({"success": False, "message": "You can only manage your own rideshares."}),
+            403,
+        )
+
+    _, _, origin_name, destination_name, arrival_time = ride
+    ride_text = (
+        "from "
+        + origin_name
+        + " to "
+        + destination_name
+        + " on "
+        + format_arrival_time(arrival_time)
+    )
+
+    try:
+        if action == "accept":
+            requester = next(
+                (
+                    r
+                    for r in database.get_pending_requests(rideid)
+                    if r[0] == requester_id
+                ),
+                None,
+            )
+            if requester and accept_rider_and_notify(
+                rideid, requester_id, requester[1], requester[2], ride_text
+            ):
+                return jsonify({"success": True, "message": "Rider accepted!"})
+            return (
+                jsonify(
+                    {
+                        "success": False,
+                        "message": "Couldn't accept: the rideshare may be full, or the request was canceled.",
+                    }
+                ),
+                400,
+            )
+
+        if reject_rider_and_notify(rideid, requester_id, ride_text):
+            return jsonify({"success": True, "message": "Request rejected."})
+        return (
+            jsonify({"success": False, "message": "That request is no longer pending."}),
+            400,
+        )
+    except:
+        return jsonify({"success": False, "message": "Failed to update request."}), 400
 
 
 @app.route("/api/notifications", methods=["GET"])
@@ -726,6 +911,28 @@ def mark_all_as_read():
         )
 
 
+@app.route("/api/clearnotifications", methods=["POST"])
+def clear_notifications():
+    """
+    Deletes all of a user's notifications
+
+    Parameters:
+        None
+
+    Returns:
+        JSON: a success message
+        400: if database exception
+
+    """
+    user_info = _cas.authenticate()
+    if database.clear_all_users_notifications(user_info["netid"]):
+        return jsonify({"success": True, "message": "Notifications cleared"})
+    return (
+        jsonify({"success": False, "message": "Failed to clear notifications"}),
+        400,
+    )
+
+
 def send_email_notification(netid, mail, subject, message):
     """
     Sends email notifications
@@ -741,7 +948,12 @@ def send_email_notification(netid, mail, subject, message):
         400: unable to send emails
     """
 
-    user_info = _cas.authenticate()
+    # Add this message to notifications table. This happens even when emails
+    # are off, so in-app notifications work locally too.
+    try:
+        database.add_notification(netid, subject, message)
+    except Exception as e:
+        print(f"Error adding to notifications table: {e}")
 
     if not app.EMAILS_ON:
         return jsonify({"success": True, "message": "EMAILS_ON set to False"})
@@ -753,12 +965,6 @@ def send_email_notification(netid, mail, subject, message):
 
         from_email = os.environ.get("EMAIL_ADDRESS")
         from_password = os.environ.get("EMAIL_PASSWORD")
-
-        # Add this message to notifications table
-        try:
-            database.add_notification(netid, subject, message)
-        except Exception as e:
-            print(f"Error adding to notifications table: {e}")
 
         # Set up the email
         msg = MIMEMultipart()
