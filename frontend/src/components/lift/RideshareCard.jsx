@@ -2,7 +2,7 @@ import { Link } from "react-router-dom";
 import RouteHeading from "./RouteHeading";
 import Label from "./Label";
 import { liftButtonClasses } from "./LiftButton";
-import { getAirport, getShortPlaceName, getTerminal } from "../../utils/utils";
+import { getAirportFullName, getShortPlaceName } from "../../utils/utils";
 import {
   formatRideDay,
   formatRideTime,
@@ -33,26 +33,20 @@ const getStatusLabel = (status, requestStatus) => {
   }
 };
 
-// "Newark Airport: Terminal B", or just the short name without a terminal
-const placeLabel = (location) => {
-  const terminal = getTerminal(location);
-  return terminal
-    ? `${getShortPlaceName(location)}: ${terminal}`
-    : getShortPlaceName(location);
-};
-
 // "✈ Newark Liberty International Airport (EWR)" for each airport end of
 // the route, so PHL and EWR are hard to mix up.
 function AirportNames({ ride }) {
-  const airports = [ride.origin, ride.destination]
-    .map(getAirport)
-    .filter(Boolean);
-  if (airports.length === 0) return null;
+  const names = [
+    ...new Set(
+      [ride.origin, ride.destination].map(getAirportFullName).filter(Boolean)
+    ),
+  ];
+  if (names.length === 0) return null;
   return (
     <ul className="flex flex-col gap-0.5">
-      {airports.map((airport) => (
+      {names.map((name) => (
         <li
-          key={airport.code}
+          key={name}
           className="flex items-center gap-1 text-small-m font-semibold md:text-sm md:leading-5 md:font-medium text-lift-secondary"
         >
           <svg
@@ -64,9 +58,7 @@ function AirportNames({ ride }) {
           >
             <path d="M21 16v-2l-8-5V3.5a1.5 1.5 0 0 0-3 0V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5l8 2.5z" />
           </svg>
-          <span>
-            {airport.name} ({airport.code})
-          </span>
+          <span>{name}</span>
         </li>
       ))}
     </ul>
@@ -119,8 +111,8 @@ export default function RideshareCard({
 }) {
   const statusLabel = getStatusLabel(status, requestStatus);
   const seatsOpen = getSeatsOpen(ride);
-  const from = placeLabel(ride.origin);
-  const to = placeLabel(ride.destination);
+  const from = getShortPlaceName(ride.origin);
+  const to = getShortPlaceName(ride.destination);
 
   if (status === "past") {
     return (
@@ -133,7 +125,7 @@ export default function RideshareCard({
           />
           <div className="flex flex-col items-end shrink-0 whitespace-nowrap">
             <p className="font-semibold text-subhead-m md:text-subhead">
-              {formatRideTime(ride.arrival_time)}
+              Arrives {formatRideTime(ride.arrival_time)}
             </p>
             <p className="text-small-m font-semibold md:text-sm md:leading-5 md:font-medium text-lift-secondary">
               {formatRideDay(ride.arrival_time)}
@@ -160,10 +152,11 @@ export default function RideshareCard({
 
   return (
     <article className="bg-lift-surface border border-lift-border rounded-lg p-5 flex flex-col gap-6">
-      <div className="flex items-start justify-between gap-3">
+      {/* the status pill drops below the time on narrow cards */}
+      <div className="flex flex-wrap items-start justify-between gap-x-3 gap-y-2">
         <div className="flex flex-col">
-          <p className="font-display font-bold text-h2-m md:font-semibold md:text-h3">
-            {formatRideTime(ride.arrival_time)}
+          <p className="font-display font-bold text-h2-m md:font-semibold md:text-h3 whitespace-nowrap">
+            Arrives {formatRideTime(ride.arrival_time)}
           </p>
           <p className="text-small-m font-semibold md:text-sm md:leading-5 md:font-medium text-lift-secondary">
             {formatRideDay(ride.arrival_time)}

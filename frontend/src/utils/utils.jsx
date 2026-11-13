@@ -8,7 +8,11 @@ export const NOTE_MAX_LENGTH = 300;
 export const normalizePhoneNumber = (phoneNumber) => {
   let digits = phoneNumber.replace(/\D/g, "");
   if (digits.length === 11 && digits[0] === "1") digits = digits.slice(1);
-  if (digits.length !== 10 || "01".includes(digits[0]) || "01".includes(digits[3]))
+  if (
+    digits.length !== 10 ||
+    "01".includes(digits[0]) ||
+    "01".includes(digits[3])
+  )
     return null;
   return digits;
 };
@@ -113,12 +117,16 @@ export const getAirport = (location) => {
 export const getShortPlaceName = (location) =>
   getAirport(location)?.short || location.name;
 
-// "Terminal B" if the location's name or address names a terminal, else null
-export const getTerminal = (location) => {
+// The full name of an airport location, e.g. "Newark Liberty International
+// Airport (EWR)" for airports the app knows, or the place's own name for any
+// other place with "Airport" in its name. Null if the location isn't an
+// airport.
+export const getAirportFullName = (location) => {
   if (!location) return null;
-  const text = `${location.name || ""} ${location.address || ""}`;
-  const match = text.match(/\bterminal\s+([a-z0-9]+)\b/i);
-  return match ? `Terminal ${match[1].toUpperCase()}` : null;
+  const airport = getAirport(location);
+  if (airport) return `${airport.name} (${airport.code})`;
+  const name = location.name || "";
+  return /\bairport\b/i.test(name) ? name : null;
 };
 
 // a colored "✈ Philadelphia (PHL)" label for airport locations
@@ -264,7 +272,10 @@ export const flipFields = (
 // event ends at the ride's arrival time and starts one hour before
 export const getGoogleCalendarUrl = (ride) => {
   const toGoogleDate = (date) =>
-    date.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "");
+    date
+      .toISOString()
+      .replace(/[-:]/g, "")
+      .replace(/\.\d{3}/, "");
   const end = new Date(ride.arrival_time);
   const start = new Date(end.getTime() - 60 * 60 * 1000);
   const riderNames = [
