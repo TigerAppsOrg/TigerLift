@@ -8,7 +8,11 @@ export const NOTE_MAX_LENGTH = 300;
 export const normalizePhoneNumber = (phoneNumber) => {
   let digits = phoneNumber.replace(/\D/g, "");
   if (digits.length === 11 && digits[0] === "1") digits = digits.slice(1);
-  if (digits.length !== 10 || "01".includes(digits[0]) || "01".includes(digits[3]))
+  if (
+    digits.length !== 10 ||
+    "01".includes(digits[0]) ||
+    "01".includes(digits[3])
+  )
     return null;
   return digits;
 };
@@ -62,30 +66,40 @@ const AIRPORTS = [
   {
     code: "PHL",
     city: "Philadelphia",
+    short: "PHL Airport",
+    name: "Philadelphia International Airport",
     match: /philadelphia international airport|\bPHL\b/i,
     className: "bg-emerald-100 text-emerald-900 border-emerald-400",
   },
   {
     code: "EWR",
     city: "Newark",
+    short: "Newark Airport",
+    name: "Newark Liberty International Airport",
     match: /newark liberty international airport|\bEWR\b|NJ 07114/i,
     className: "bg-amber-100 text-amber-900 border-amber-400",
   },
   {
     code: "JFK",
     city: "New York JFK",
+    short: "JFK Airport",
+    name: "John F. Kennedy International Airport",
     match: /kennedy international airport|NY 11430/i,
     className: "bg-indigo-100 text-indigo-900 border-indigo-400",
   },
   {
     code: "LGA",
     city: "New York LaGuardia",
+    short: "LaGuardia Airport",
+    name: "LaGuardia Airport",
     match: /laguardia airport|NY 11371/i,
     className: "bg-cyan-100 text-cyan-900 border-cyan-400",
   },
   {
     code: "TTN",
     city: "Trenton",
+    short: "Trenton Airport",
+    name: "Trenton-Mercer Airport",
     match: /trenton[- ]mercer airport/i,
     className: "bg-lime-100 text-lime-900 border-lime-500",
   },
@@ -96,6 +110,23 @@ export const getAirport = (location) => {
   if (!location) return null;
   const text = `${location.name || ""} ${location.address || ""}`;
   return AIRPORTS.find((airport) => airport.match.test(text)) || null;
+};
+
+// a short name for ride cards, e.g. "Newark Airport" instead of
+// "Newark Liberty International Airport"
+export const getShortPlaceName = (location) =>
+  getAirport(location)?.short || location.name;
+
+// The full name of an airport location, e.g. "Newark Liberty International
+// Airport (EWR)" for airports the app knows, or the place's own name for any
+// other place with "Airport" in its name. Null if the location isn't an
+// airport.
+export const getAirportFullName = (location) => {
+  if (!location) return null;
+  const airport = getAirport(location);
+  if (airport) return `${airport.name} (${airport.code})`;
+  const name = location.name || "";
+  return /\bairport\b/i.test(name) ? name : null;
 };
 
 // a colored "✈ Philadelphia (PHL)" label for airport locations
@@ -241,7 +272,10 @@ export const flipFields = (
 // event ends at the ride's arrival time and starts one hour before
 export const getGoogleCalendarUrl = (ride) => {
   const toGoogleDate = (date) =>
-    date.toISOString().replace(/[-:]/g, "").replace(/\.\d{3}/, "");
+    date
+      .toISOString()
+      .replace(/[-:]/g, "")
+      .replace(/\.\d{3}/, "");
   const end = new Date(ride.arrival_time);
   const start = new Date(end.getTime() - 60 * 60 * 1000);
   const riderNames = [
