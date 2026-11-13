@@ -62,30 +62,40 @@ const AIRPORTS = [
   {
     code: "PHL",
     city: "Philadelphia",
+    short: "PHL Airport",
+    name: "Philadelphia International Airport",
     match: /philadelphia international airport|\bPHL\b/i,
     className: "bg-emerald-100 text-emerald-900 border-emerald-400",
   },
   {
     code: "EWR",
     city: "Newark",
+    short: "Newark Airport",
+    name: "Newark Liberty International Airport",
     match: /newark liberty international airport|\bEWR\b|NJ 07114/i,
     className: "bg-amber-100 text-amber-900 border-amber-400",
   },
   {
     code: "JFK",
     city: "New York JFK",
+    short: "JFK Airport",
+    name: "John F. Kennedy International Airport",
     match: /kennedy international airport|NY 11430/i,
     className: "bg-indigo-100 text-indigo-900 border-indigo-400",
   },
   {
     code: "LGA",
     city: "New York LaGuardia",
+    short: "LaGuardia Airport",
+    name: "LaGuardia Airport",
     match: /laguardia airport|NY 11371/i,
     className: "bg-cyan-100 text-cyan-900 border-cyan-400",
   },
   {
     code: "TTN",
     city: "Trenton",
+    short: "Trenton Airport",
+    name: "Trenton-Mercer Airport",
     match: /trenton[- ]mercer airport/i,
     className: "bg-lime-100 text-lime-900 border-lime-500",
   },
@@ -96,6 +106,19 @@ export const getAirport = (location) => {
   if (!location) return null;
   const text = `${location.name || ""} ${location.address || ""}`;
   return AIRPORTS.find((airport) => airport.match.test(text)) || null;
+};
+
+// a short name for ride cards, e.g. "Newark Airport" instead of
+// "Newark Liberty International Airport"
+export const getShortPlaceName = (location) =>
+  getAirport(location)?.short || location.name;
+
+// "Terminal B" if the location's name or address names a terminal, else null
+export const getTerminal = (location) => {
+  if (!location) return null;
+  const text = `${location.name || ""} ${location.address || ""}`;
+  const match = text.match(/\bterminal\s+([a-z0-9]+)\b/i);
+  return match ? `Terminal ${match[1].toUpperCase()}` : null;
 };
 
 // a colored "✈ Philadelphia (PHL)" label for airport locations
