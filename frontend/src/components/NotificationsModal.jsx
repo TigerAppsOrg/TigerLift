@@ -110,15 +110,16 @@ export default function NotificationsModal({
     );
   };
 
-  const notifsHeight = window.innerHeight - 73;
-
   return (
     <div>
       <div
         className="fixed inset-0 z-20 bg-zinc-800 bg-opacity-20 h-full"
         onClick={handleBackdropClick}
       ></div>
-      <div className="md:pb-0 z-[25] relative md:absolute w-full md:w-[340px] md:top-16 md:right-24 bg-white rounded-xl shadow-lg border-2 border-theme_medium_2 h-full md:h-[480px]">
+      {/* Mobile: fills the screen above the bottom tab bar (which stays
+          visible, as in Figma's Alerts screen). Desktop: popover under the
+          bell (position from Figma 57:1570). */}
+      <div className="z-[25] fixed inset-x-0 top-0 bottom-tabbar flex flex-col md:absolute md:inset-auto md:w-[340px] md:top-[79px] md:right-[128px] md:h-[480px] bg-surface md:rounded-xl border-line md:border shadow-elevation-3">
         <div className="flex justify-between items-center p-4 border-b border-zinc-200">
           <h2 className="text-lg font-semibold flex gap-4 items-center">
             Notifications
@@ -141,16 +142,7 @@ export default function NotificationsModal({
             className="text-zinc-500 hover:text-zinc-800 hover:bg-zinc-100"
           ></IconButton>
         </div>
-        <div
-          className={`p-4 overflow-y-auto md:h-[400px] w-full ${
-            window.innerWidth < 768
-              ? "notification-panel-mobile"
-              : "notification-panel"
-          }`}
-          style={{
-            "--dynamic-height": `${notifsHeight}px`,
-          }}
-        >
+        <div className="p-4 overflow-y-auto flex-1 min-h-0 w-full">
           {isLoading ? (
             <LoadingIcon carColor="bg-theme_medium_2" />
           ) : (

@@ -60,13 +60,3 @@ a:hover {
 .pac-item {
   padding: 2px 6px;
 }
-
-/* notification panel */
-.notification-panel {
-  height: 400px;
-}
-
-/* notification panel mobile */
-.notification-panel-mobile {
-  height: var(--dynamic-height);
-}
