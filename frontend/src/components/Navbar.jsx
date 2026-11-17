@@ -313,7 +313,7 @@ export default function Navbar({ user_info }) {
             <ProfileMenuPanel
               id={mobileMenuId}
               displayname={user_info?.displayname}
-              className="fixed right-gutter-mobile bottom-[calc(theme(spacing.tabbar)+theme(spacing.2))]"
+              className="fixed right-gutter-mobile bottom-[calc(theme(spacing.tabbar)+theme(spacing.10))]"
             />
           )}
         </div>

@@ -113,13 +113,14 @@ export default function NotificationsModal({
   return (
     <div>
       <div
-        className="fixed inset-0 z-20 bg-zinc-800 bg-opacity-20 h-full"
+        className="hidden md:block fixed inset-0 z-20 bg-zinc-800 bg-opacity-20 h-full"
         onClick={handleBackdropClick}
       ></div>
-      {/* Mobile: fills the screen above the bottom tab bar (which stays
-          visible, as in Figma's Alerts screen). Desktop: popover under the
-          bell (position from Figma 57:1570). */}
-      <div className="z-[25] fixed inset-x-0 top-0 bottom-tabbar flex flex-col md:absolute md:inset-auto md:w-[340px] md:top-[79px] md:right-[128px] md:h-[480px] bg-surface md:rounded-xl border-line md:border shadow-elevation-3">
+      {/* Mobile: full screen under the bottom tab bar, which stays visible
+          on top (as in Figma's Alerts screen); the list is padded to clear
+          it. Desktop: popover under the bell (position from Figma 57:1570),
+          over a backdrop that closes it. */}
+      <div className="z-[25] fixed inset-0 flex flex-col md:absolute md:inset-auto md:w-[340px] md:top-[79px] md:right-[128px] md:h-[480px] bg-surface md:rounded-xl border-line md:border shadow-elevation-3">
         <div className="flex justify-between items-center p-4 border-b border-zinc-200">
           <h2 className="text-lg font-semibold flex gap-4 items-center">
             Notifications
@@ -142,7 +143,7 @@ export default function NotificationsModal({
             className="text-zinc-500 hover:text-zinc-800 hover:bg-zinc-100"
           ></IconButton>
         </div>
-        <div className="p-4 overflow-y-auto flex-1 min-h-0 w-full">
+        <div className="p-4 pb-[calc(theme(spacing.tabbar)+theme(spacing.10))] md:pb-4 overflow-y-auto flex-1 min-h-0 w-full">
           {isLoading ? (
             <LoadingIcon carColor="bg-theme_medium_2" />
           ) : (
