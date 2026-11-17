@@ -1,0 +1,87 @@
+/*
+ * TigerLift design tokens (TIG-340).
+ * Source: Figma "TigerLift-Facelift", Design System page (node 132:2328).
+ * Primitives are raw palette values; pages should use the semantic
+ * --color-* tokens (exposed as Tailwind classes in tailwind.config.js).
+ * Light mode only for now: Figma also defines dark values, not shipped yet.
+ */
+:root {
+  /* Primitives: grey */
+  --grey-0: #ffffff;
+  --grey-50: #f9f8f7;
+  --grey-100: #eeebe6;
+  --grey-200: #dfdcd4;
+  --grey-300: #c8c4bb;
+  --grey-400: #a7a39c;
+  --grey-500: #878172;
+  --grey-600: #66615a;
+  --grey-700: #4a463f;
+  --grey-800: #2e2b26;
+  --grey-900: #161513;
+
+  /* Primitives: lime (accent) */
+  --lime-100: #f3ffb0;
+  --lime-400: #e1ff01;
+  --lime-500: #cde800;
+  --lime-800: #4d5900;
+
+  /* Primitives: status hues */
+  --red-100: #fbe6e1;
+  --red-500: #cd4230;
+  --red-700: #a3301f;
+  --green-100: #e6f0d9;
+  --green-500: #669c20;
+  --green-700: #4f7a18;
+  --sky-100: #dce8ea;
+  --sky-800: #1f3e46;
+
+  /* Semantic: backgrounds */
+  --color-bg-page: var(--grey-50);
+  --color-bg-surface: var(--grey-0);
+  --color-bg-subtle: var(--grey-100);
+  --color-bg-inverse: var(--grey-800);
+  --color-bg-muted: var(--grey-200);
+  --color-bg-placeholder: var(--grey-400);
+  --color-bg-scrim: var(--grey-400);
+
+  /* Semantic: text */
+  --color-text-primary: var(--grey-900);
+  --color-text-secondary: var(--grey-600);
+  --color-text-placeholder: var(--grey-500);
+  --color-text-disabled: var(--grey-400);
+  --color-text-on-inverse: var(--grey-100);
+  --color-text-on-accent: var(--grey-900);
+  --color-text-accent: var(--lime-800);
+  --color-text-on-danger: var(--grey-0);
+
+  /* Semantic: icons */
+  --color-icon-primary: var(--grey-900);
+  --color-icon-muted: var(--grey-600);
+
+  /* Semantic: borders */
+  --color-border-default: var(--grey-300);
+  --color-border-strong: var(--grey-400);
+  --color-border-inverse: var(--grey-800);
+  --color-border-subtle: var(--grey-200);
+
+  /* Semantic: fills (buttons, controls) */
+  --color-fill-primary: var(--grey-800);
+  --color-fill-primary-pressed: var(--grey-700);
+  --color-fill-accent: var(--lime-400);
+  --color-fill-accent-pressed: var(--lime-500);
+  --color-fill-accent-subtle: var(--lime-100);
+
+  /* Semantic: status */
+  --color-status-danger: var(--red-500);
+  --color-status-danger-bg: var(--red-100);
+  --color-status-danger-text: var(--red-700);
+  --color-status-success: var(--green-700);
+  --color-status-success-bg: var(--green-100);
+  --color-status-success-text: var(--green-700);
+  --color-status-info-bg: var(--sky-100);
+  --color-status-info-text: var(--sky-800);
+
+  /* Font stacks */
+  --font-sans: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
+  --font-display: Sora, Inter, system-ui, sans-serif;
+}
