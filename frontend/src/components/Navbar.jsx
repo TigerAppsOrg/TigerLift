@@ -32,6 +32,14 @@ const TABBAR_NOTCH_STYLE = {
     "radial-gradient(circle 38px at 50% 0, transparent 38px, var(--color-bg-subtle) 38.5px)",
 };
 
+// Focus whichever of the desktop / mobile buttons is currently visible.
+function focusVisible(...refs) {
+  const visible = refs.find(
+    (ref) => ref.current && ref.current.offsetParent !== null
+  );
+  visible?.current.focus();
+}
+
 function UnreadDot({ ringClass }) {
   return (
     <span
@@ -45,7 +53,6 @@ function ProfileMenuPanel({ id, displayname, className }) {
   return (
     <div
       id={id}
-      role="menu"
       className={`z-30 min-w-[200px] p-4 bg-surface border border-line rounded-control shadow-elevation-2 flex flex-col gap-3 ${className}`}
     >
       {displayname && (
@@ -54,7 +61,6 @@ function ProfileMenuPanel({ id, displayname, className }) {
         </p>
       )}
       <a
-        role="menuitem"
         href="/api/logout"
         className={`${buttonClasses({ variant: "secondary" })} w-full`}
       >
@@ -70,6 +76,7 @@ export default function Navbar({ user_info }) {
   const menuId = useId();
   const desktopMenuId = `${menuId}-desktop`;
   const mobileMenuId = `${menuId}-mobile`;
+  const alertsPanelId = `${menuId}-alerts`;
 
   // Only one of the notifications panel or the profile menu is open at a time.
   const [openPanel, setOpenPanel] = useState(null); // "alerts" | "profile" | null
@@ -78,6 +85,8 @@ export default function Navbar({ user_info }) {
 
   const desktopProfileButton = useRef(null);
   const mobileProfileButton = useRef(null);
+  const desktopAlertsButton = useRef(null);
+  const mobileAlertsButton = useRef(null);
 
   const {
     newNotifications,
@@ -94,6 +103,21 @@ export default function Navbar({ user_info }) {
     setOpenPanel(null);
   }, [location.pathname]);
 
+  // Alerts panel: close on Escape and return focus to the visible bell.
+  useEffect(() => {
+    if (!showNotifications) return;
+
+    const handleKeyDown = (e) => {
+      if (e.key === "Escape") {
+        setOpenPanel(null);
+        focusVisible(desktopAlertsButton, mobileAlertsButton);
+      }
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [showNotifications]);
+
   // Profile menu: close on outside click and on Escape (returning focus).
   useEffect(() => {
     if (!showProfileMenu) return;
@@ -106,11 +130,7 @@ export default function Navbar({ user_info }) {
     const handleKeyDown = (e) => {
       if (e.key === "Escape") {
         setOpenPanel(null);
-        // Focus whichever profile button is currently visible.
-        const visible = [desktopProfileButton, mobileProfileButton].find(
-          (ref) => ref.current && ref.current.offsetParent !== null
-        );
-        visible?.current.focus();
+        focusVisible(desktopProfileButton, mobileProfileButton);
       }
     };
 
@@ -140,10 +160,14 @@ export default function Navbar({ user_info }) {
   const bellLabel = hasUnread
     ? `Notifications, ${unreadCount} unread`
     : "Notifications";
+  // Mobile tab shows the visible word "Alerts", so its name starts with it
+  // (WCAG 2.5.3 Label in Name).
+  const alertsLabel = hasUnread ? `Alerts, ${unreadCount} unread` : "Alerts";
 
   return (
     <>
       <NotificationsModal
+        id={alertsPanelId}
         isOpen={showNotifications}
         isLoading={isLoading}
         onClose={() => setOpenPanel(null)}
@@ -189,9 +213,11 @@ export default function Navbar({ user_info }) {
 
           <button
             type="button"
+            ref={desktopAlertsButton}
             onClick={() => togglePanel("alerts")}
             aria-label={bellLabel}
             aria-expanded={showNotifications}
+            aria-controls={alertsPanelId}
             className={`relative z-[21] rounded-control transition-colors hover:text-icon-primary ${FOCUS_RING} ${
               showNotifications ? "text-icon-primary" : "text-icon-muted"
             }`}
@@ -206,7 +232,6 @@ export default function Navbar({ user_info }) {
               type="button"
               onClick={() => togglePanel("profile")}
               aria-label="Account menu"
-              aria-haspopup="menu"
               aria-expanded={showProfileMenu}
               aria-controls={desktopMenuId}
               className={`block rounded-control transition-colors hover:text-icon-primary ${FOCUS_RING} ${
@@ -273,9 +298,11 @@ export default function Navbar({ user_info }) {
 
         <button
           type="button"
+          ref={mobileAlertsButton}
           onClick={() => togglePanel("alerts")}
-          aria-label={bellLabel}
+          aria-label={alertsLabel}
           aria-expanded={showNotifications}
+          aria-controls={alertsPanelId}
           className={`flex-1 flex flex-col items-center justify-center text-mobile-label rounded-control ${FOCUS_RING} ${
             showNotifications ? "text-content-primary" : "text-content-secondary"
           }`}
@@ -287,7 +314,7 @@ export default function Navbar({ user_info }) {
             />
             {hasUnread && <UnreadDot ringClass="ring-surface-subtle" />}
           </span>
-          <span aria-hidden="true">Alerts</span>
+          <span>Alerts</span>
         </button>
 
         <div className="flex-1 flex" data-profile-menu>
@@ -295,8 +322,6 @@ export default function Navbar({ user_info }) {
             ref={mobileProfileButton}
             type="button"
             onClick={() => togglePanel("profile")}
-            aria-label="Account menu"
-            aria-haspopup="menu"
             aria-expanded={showProfileMenu}
             aria-controls={mobileMenuId}
             className={`flex-1 flex flex-col items-center justify-center text-mobile-label rounded-control ${FOCUS_RING} ${
@@ -307,7 +332,7 @@ export default function Navbar({ user_info }) {
               size={24}
               className={showProfileMenu ? "text-icon-primary" : "text-icon-muted"}
             />
-            <span aria-hidden="true">Profile</span>
+            Profile
           </button>
           {showProfileMenu && (
             <ProfileMenuPanel
