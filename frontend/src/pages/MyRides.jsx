@@ -15,7 +15,6 @@ import {
   capitalizeFirstLetter,
   handleShowPopupMessage,
   renderRideCardInfo,
-  bigButtonStyling1,
   getGoogleCalendarUrl,
 } from "../utils/utils";
 
@@ -295,7 +294,8 @@ export default function MyRides() {
           </p>
         )}
         <Button
-          className={`self-start mt-4 ${bigButtonStyling1}`}
+          variant="secondary"
+          className="self-start mt-4"
           onClick={() => setShowPastRides(!showPastRides)}
         >
           {showPastRides

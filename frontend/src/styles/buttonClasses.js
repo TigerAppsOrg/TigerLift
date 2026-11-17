@@ -16,15 +16,15 @@ const VARIANTS = {
 };
 
 const SIZES = {
-  // Figma "Small"
-  sm: { primary: "h-[22px] px-2 py-1 text-mobile-xs" },
+  // Figma "Small" (4 + 14px line + 4 = 22px tall, from padding alone)
+  sm: { primary: "min-w-control px-2 py-1 text-mobile-xs" },
   // Figma "Default" / "Variant2" (desktop uses the bolder Desktop-Button style)
   md: {
     primary: "h-control min-w-control px-6 py-2 text-mobile-button md:text-desktop-button",
     secondary: "h-control min-w-control px-4 py-2 text-mobile-button",
   },
-  // Figma "v"
-  lg: { primary: "h-[52px] min-w-control px-8 py-4 text-desktop-button" },
+  // Figma "v" (16 + 20px line + 16 = 52px tall, from padding alone)
+  lg: { primary: "min-h-control min-w-control px-8 py-4 text-desktop-button" },
 };
 
 const DISABLED =

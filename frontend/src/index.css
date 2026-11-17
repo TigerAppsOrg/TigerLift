@@ -30,7 +30,7 @@ body {
 }
 
 a:hover {
-  @apply text-zinc-700;
+  color: var(--color-text-primary);
 }
 
 /* Google autocomplete search and dest fields */

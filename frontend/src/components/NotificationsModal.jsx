@@ -137,7 +137,6 @@ export default function NotificationsModal({
         id={id}
         ref={panelRef}
         role="dialog"
-        aria-modal="true"
         aria-labelledby={headingId}
         tabIndex={-1}
         className="z-[25] fixed inset-0 flex flex-col md:absolute md:inset-auto md:w-[340px] md:top-[79px] md:right-[128px] md:h-[480px] bg-surface text-content-primary md:rounded-control border-line md:border shadow-elevation-3 focus:outline-none"

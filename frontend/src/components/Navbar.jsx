@@ -44,7 +44,7 @@ function UnreadDot({ ringClass }) {
   return (
     <span
       aria-hidden="true"
-      className={`absolute top-0.5 right-[3px] h-2.5 w-2.5 rounded-full bg-status-danger ring-2 ${ringClass}`}
+      className={`absolute top-0.5 right-0.5 h-2.5 w-2.5 rounded-full bg-status-danger ring-2 ${ringClass}`}
     />
   );
 }
@@ -53,7 +53,7 @@ function ProfileMenuPanel({ id, displayname, className }) {
   return (
     <div
       id={id}
-      className={`z-30 min-w-[200px] p-4 bg-surface border border-line rounded-control shadow-elevation-2 flex flex-col gap-3 ${className}`}
+      className={`z-30 w-52 p-4 bg-surface border border-line rounded-control shadow-elevation-2 flex flex-col gap-3 ${className}`}
     >
       {displayname && (
         <p className="text-desktop-small text-content-secondary">
@@ -192,7 +192,7 @@ export default function Navbar({ user_info }) {
               key={to}
               to={to}
               className={({ isActive }) =>
-                `text-desktop-nav rounded-control transition-colors hover:text-content-primary ${FOCUS_RING} ${
+                `py-2.5 text-desktop-nav rounded-control transition-colors hover:text-content-primary ${FOCUS_RING} ${
                   isActive ? "text-content-primary" : "text-content-secondary"
                 }`
               }
