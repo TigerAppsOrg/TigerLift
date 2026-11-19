@@ -34,6 +34,18 @@ const fontSize = {
   "mobile-label": ["12px", { lineHeight: "16px", letterSpacing: "0.02em", fontWeight: "500" }],
   "mobile-label-sm": ["10px", { lineHeight: "12px", letterSpacing: "0", fontWeight: "400" }],
   "mobile-button": ["16px", { lineHeight: "20px", letterSpacing: "0", fontWeight: "600" }],
+  // Ride card scale (TIG-338). Names differ from the desktop/mobile tokens above.
+  display: ["72px", { lineHeight: "76px", letterSpacing: "-1.44px" }],
+  "display-m": ["40px", { lineHeight: "44px", letterSpacing: "-0.8px" }],
+  h2: ["40px", { lineHeight: "44px", letterSpacing: "-0.4px" }],
+  "h2-m": ["24px", { lineHeight: "28px", letterSpacing: "-0.24px" }],
+  h3: ["28px", { lineHeight: "32px" }],
+  subhead: ["20px", { lineHeight: "28px" }],
+  "subhead-m": ["18px", { lineHeight: "24px" }],
+  "body-lg": ["18px", { lineHeight: "28px" }],
+  label: ["16px", { lineHeight: "16px", letterSpacing: "0.64px" }],
+  "label-m": ["12px", { lineHeight: "16px", letterSpacing: "0.24px" }],
+  "small-m": ["12px", { lineHeight: "16px" }],
 };
 
 export default {
@@ -135,26 +147,6 @@ export default {
         },
       },
       fontFamily: {
-        display: ["Sora", "Inter", "system-ui", "sans-serif"],
-      },
-      // type scale from "04 · Desktop typography" / "05 · Mobile typography"
-      fontSize: {
-        display: ["72px", { lineHeight: "76px", letterSpacing: "-1.44px" }],
-        "display-m": ["40px", { lineHeight: "44px", letterSpacing: "-0.8px" }],
-        h2: ["40px", { lineHeight: "44px", letterSpacing: "-0.4px" }],
-        "h2-m": ["24px", { lineHeight: "28px", letterSpacing: "-0.24px" }],
-        h3: ["28px", { lineHeight: "32px" }],
-        subhead: ["20px", { lineHeight: "28px" }],
-        "subhead-m": ["18px", { lineHeight: "24px" }],
-        "body-lg": ["18px", { lineHeight: "28px" }],
-        label: ["16px", { lineHeight: "16px", letterSpacing: "0.64px" }],
-        "label-m": ["12px", { lineHeight: "16px", letterSpacing: "0.24px" }],
-        "small-m": ["12px", { lineHeight: "16px" }],
-      },
-      boxShadow: {
-        floating: "0 1px 3px rgba(22, 21, 19, 0.06), 0 6px 16px rgba(22, 21, 19, 0.1)",
-      },
-      fontFamily: {
         sans: ["Inter", "system-ui", "Avenir", "Helvetica", "Arial", "sans-serif"],
         display: ["Sora", "Inter", "system-ui", "sans-serif"],
       },
@@ -171,6 +163,7 @@ export default {
         control: "4px",
       },
       boxShadow: {
+        floating: "0 1px 3px rgba(22, 21, 19, 0.06), 0 6px 16px rgba(22, 21, 19, 0.1)",
         "elevation-1": "0 1px 2px rgba(22,21,19,.06), 0 2px 6px rgba(22,21,19,.04)",
         "elevation-2": "0 1px 3px rgba(22,21,19,.06), 0 6px 16px rgba(22,21,19,.10)",
         "elevation-3": "0 2px 8px rgba(22,21,19,.06), 0 16px 40px rgba(22,21,19,.16)",
