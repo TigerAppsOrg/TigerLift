@@ -1,6 +1,6 @@
 import { useRef, useState } from "react";
 import Autocomplete from "react-google-autocomplete";
-import { Input } from "antd";
+import { Input, TimePicker } from "antd";
 import Modal from "./Modal.jsx";
 import Dropdown from "./Dropdown.jsx";
 import IconButton from "./IconButton.jsx";
@@ -43,6 +43,9 @@ export default function CreateRideModal({ isOpen, onClose, onCreated }) {
   const [dest, setDest] = useState(null);
   const [date, setDate] = useState("");
   const [time, setTime] = useState("");
+  // optional departure window, on the arrival date
+  const [departStart, setDepartStart] = useState(null);
+  const [departEnd, setDepartEnd] = useState(null);
   const [rideNote, setRideNote] = useState("");
   const [phoneNumber, setPhoneNumber] = useState("");
   const [isCreatingRide, setIsCreatingRide] = useState(false);
@@ -57,6 +60,8 @@ export default function CreateRideModal({ isOpen, onClose, onCreated }) {
     setDest(null);
     setDate("");
     setTime("");
+    setDepartStart(null);
+    setDepartEnd(null);
     setRideNote("");
     setPhoneNumber("");
     originRef.current = null;
@@ -112,11 +117,37 @@ export default function CreateRideModal({ isOpen, onClose, onCreated }) {
       return;
     }
 
-    createRide(arrivalTime);
+    // optional departure window: both times or neither, on the arrival
+    // date, starting before it ends and ending by the arrival time
+    let departureWindow = null;
+    if (departStart || departEnd) {
+      const onArrivalDate = (t) =>
+        new Date(`${date.format("YYYY-MM-DD")}T${t.format("HH:mm:00")}`);
+      const windowError =
+        !departStart || !departEnd
+          ? "Please give both a start and end for the departure window, or leave both empty."
+          : onArrivalDate(departStart) >= onArrivalDate(departEnd)
+            ? "The departure window must start before it ends."
+            : onArrivalDate(departEnd) > arrivalTime
+              ? "The departure window must end by the arrival time."
+              : onArrivalDate(departEnd) <= new Date()
+                ? "The departure window can't be in the past."
+                : null;
+      if (windowError) {
+        setValidationModal({ title: "Invalid Input", message: windowError });
+        return;
+      }
+      departureWindow = {
+        start: onArrivalDate(departStart),
+        end: onArrivalDate(departEnd),
+      };
+    }
+
+    createRide(arrivalTime, departureWindow);
   };
 
   // Creates ride by making API call to /addride
-  const createRide = async (arrivalTime) => {
+  const createRide = async (arrivalTime, departureWindow) => {
     setIsCreatingRide(true);
     let responseData = {
       success: false,
@@ -135,6 +166,8 @@ export default function CreateRideModal({ isOpen, onClose, onCreated }) {
           arrival_time: arrivalTime.toISOString(),
           note: rideNote,
           phone_number: phoneNumber,
+          departure_start: departureWindow?.start.toISOString() ?? null,
+          departure_end: departureWindow?.end.toISOString() ?? null,
         }),
       });
       responseData = await response.json();
@@ -235,6 +268,35 @@ export default function CreateRideModal({ isOpen, onClose, onCreated }) {
                   time={time}
                   setTime={setTime}
                 />
+              </div>
+              <div>
+                <p className="font-medium">Departure Window (optional)</p>
+                <p className="text-sm text-lift-secondary mb-1">
+                  When you&apos;re planning to leave, on the arrival date
+                </p>
+                <div className="flex items-center gap-2">
+                  <TimePicker
+                    className="flex-1 min-w-0 max-md:!h-11"
+                    format="h:mm A"
+                    minuteStep={5}
+                    placeholder="Leave after"
+                    value={departStart}
+                    onChange={setDepartStart}
+                    style={{ height: "38px" }}
+                    aria-label="Departure window start"
+                  />
+                  <span className="text-lift-secondary">to</span>
+                  <TimePicker
+                    className="flex-1 min-w-0 max-md:!h-11"
+                    format="h:mm A"
+                    minuteStep={5}
+                    placeholder="Leave by"
+                    value={departEnd}
+                    onChange={setDepartEnd}
+                    style={{ height: "38px" }}
+                    aria-label="Departure window end"
+                  />
+                </div>
               </div>
               <div>
                 <p className="font-medium">Phone Number</p>

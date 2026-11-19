@@ -16,6 +16,18 @@ export const formatRideTime = (time) =>
     })
     .replace(" ", "");
 
+// A ride's departure window, or null if it doesn't have one.
+//   "full":    "4:00PM - 5:30PM" (Ride Details, as in Figma)
+//   "compact": "4:00–5:30PM" (ride card), keeping both AM/PM when they differ
+export const formatDepartureWindow = (ride, style = "full") => {
+  if (!ride.departure_start || !ride.departure_end) return null;
+  const start = formatRideTime(ride.departure_start);
+  const end = formatRideTime(ride.departure_end);
+  if (style === "full") return `${start} - ${end}`;
+  const sameHalf = start.slice(-2) === end.slice(-2);
+  return `${sameHalf ? start.slice(0, -2) : start}–${end}`;
+};
+
 // "Today • 10/27", "Tomorrow • 10/28" or "Thu • 10/30", in Eastern time
 export const formatRideDay = (time) => {
   const date = new Date(time);
@@ -83,6 +95,7 @@ const getSearchText = (ride) => {
     ride.admin_name,
     formatRideDay(ride.arrival_time),
     formatRideTime(ride.arrival_time),
+    formatDepartureWindow(ride) || "",
   ];
   for (const location of [ride.origin, ride.destination]) {
     parts.push(location.name, location.address);

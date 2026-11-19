@@ -112,6 +112,8 @@ def api_dashboard():
             "updated_at": ride[9],
             "current_riders": ride[10],
             "note": ride[11],
+            "departure_start": ride[12],
+            "departure_end": ride[13],
         }
 
         # full rides are included too; Home shows them with a "Full" button
@@ -168,6 +170,8 @@ def get_my_rides():
             "current_riders": ride[11],
             "requested_riders": ride[12],
             "phone_number": ride[13],
+            "departure_start": ride[14],
+            "departure_end": ride[15],
         }
 
         if updated_ride["arrival_time"] > current_time:
@@ -195,6 +199,8 @@ def get_my_rides():
             "request_status": ride[12],
             # only accepted riders get the poster's phone number
             "phone_number": ride[13] if ride[12] == "accepted" else None,
+            "departure_start": ride[14],
+            "departure_end": ride[15],
         }
 
         if updated_ride["arrival_time"] > current_time:
@@ -234,6 +240,8 @@ def addride():
         arrival_time: a datetime object with the arrival date & time
         phone_number: the poster's US phone number, shown to accepted riders
         note (optional): note with the rideshare
+        departure_start, departure_end (optional): ISO times for the window
+            the ride leaves in; both or neither, ending by the arrival time
 
     Returns:
         JSON: a success message
@@ -281,6 +289,12 @@ def addride():
 
     arrival_time = data.get("arrival_time")
 
+    departure_start, departure_end, window_error = parse_departure_window(
+        data.get("departure_start"), data.get("departure_end"), arrival_time
+    )
+    if window_error:
+        return jsonify({"success": False, "message": window_error}), 400
+
     origin_json = Json(origin)
     dest_json = Json(dest)
 
@@ -295,6 +309,8 @@ def addride():
             arrival_time,
             note,
             phone_number,
+            departure_start,
+            departure_end,
         )
         return jsonify({"success": True, "message": "Rideshare successfully created!"})
     except:
@@ -302,6 +318,49 @@ def addride():
             jsonify({"success": False, "message": "Failed to create rideshare."}),
             400,
         )
+
+
+def parse_iso_time(value):
+    """
+    Parses an ISO 8601 time like "2026-11-20T21:00:00.000Z" into a UTC
+    datetime, or returns None if it's missing or invalid.
+    """
+    if not isinstance(value, str) or not value:
+        return None
+    try:
+        parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=timezone.utc)
+    return parsed.astimezone(timezone.utc)
+
+
+def parse_departure_window(start, end, arrival_time):
+    """
+    Checks an optional departure window. Both ends or neither must be set;
+    the window must start before it ends, end by the arrival time, and not
+    be over already.
+
+    Returns:
+        (start, end, error): ISO strings to store (or None, None), and an
+        error message if the window is invalid
+    """
+    if not start and not end:
+        return None, None, None
+
+    start_time = parse_iso_time(start)
+    end_time = parse_iso_time(end)
+    if not start_time or not end_time:
+        return None, None, "Please give both a start and end for the departure window."
+    if start_time >= end_time:
+        return None, None, "The departure window must start before it ends."
+    arrival = parse_iso_time(arrival_time)
+    if arrival and end_time > arrival:
+        return None, None, "The departure window must end by the arrival time."
+    if end_time <= datetime.now(timezone.utc):
+        return None, None, "The departure window can't be in the past."
+    return start, end, None
 
 
 def normalize_phone_number(phone_number):
@@ -492,6 +551,8 @@ def searchrides():
             "updated_at": ride[9],
             "current_riders": ride[10],
             "note": ride[11],
+            "departure_start": ride[12],
+            "departure_end": ride[13],
         }
 
         if (

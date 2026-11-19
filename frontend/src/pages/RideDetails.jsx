@@ -24,6 +24,7 @@ import {
 } from "../utils/utils";
 import {
   findRide,
+  formatDepartureWindow,
   formatRideDay,
   formatRideTime,
   getFirstName,
@@ -454,13 +455,25 @@ export default function RideDetails() {
 
             <PickupCard ride={ride} className="md:hidden" />
 
-            <div className="flex flex-col gap-1 py-2">
-              <p className="text-small-m md:text-sm md:leading-5 md:font-medium text-lift-secondary">
-                Arrives by
-              </p>
-              <p className="font-display font-bold text-h2-m md:font-semibold md:text-h3">
-                {formatRideTime(ride.arrival_time)}
-              </p>
+            <div className="flex flex-col">
+              {formatDepartureWindow(ride) && (
+                <div className="flex flex-col gap-1 py-2">
+                  <p className="text-small-m md:text-sm md:leading-5 md:font-medium text-lift-secondary">
+                    Departure window
+                  </p>
+                  <p className="font-display font-bold text-h2-m md:font-semibold md:text-h3">
+                    {formatDepartureWindow(ride)}
+                  </p>
+                </div>
+              )}
+              <div className="flex flex-col gap-1 py-2">
+                <p className="text-small-m md:text-sm md:leading-5 md:font-medium text-lift-secondary">
+                  Arrives by
+                </p>
+                <p className="font-display font-bold text-h2-m md:font-semibold md:text-h3">
+                  {formatRideTime(ride.arrival_time)}
+                </p>
+              </div>
             </div>
 
             <section

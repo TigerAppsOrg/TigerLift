@@ -4,11 +4,21 @@ import Label from "./Label";
 import { liftButtonClasses } from "./LiftButton";
 import { getAirportFullName, getShortPlaceName } from "../../utils/utils";
 import {
+  formatDepartureWindow,
   formatRideDay,
   formatRideTime,
   getFirstName,
   getSeatsOpen,
 } from "../../utils/rides";
+
+// "Leaves 4:00–5:30PM" when the ride has a departure window, else
+// "Arrives 4:30PM"
+const rideTimeLabel = (ride) => {
+  const departure = formatDepartureWindow(ride, "compact");
+  return departure
+    ? `Leaves ${departure}`
+    : `Arrives ${formatRideTime(ride.arrival_time)}`;
+};
 
 // Status pill (top right) for each card state. "requested" depends on the
 // viewer's request.
@@ -125,7 +135,7 @@ export default function RideshareCard({
           />
           <div className="flex flex-col items-end shrink-0 whitespace-nowrap">
             <p className="font-semibold text-subhead-m md:text-subhead">
-              Arrives {formatRideTime(ride.arrival_time)}
+              {rideTimeLabel(ride)}
             </p>
             <p className="text-small-m font-semibold md:text-sm md:leading-5 md:font-medium text-lift-secondary">
               {formatRideDay(ride.arrival_time)}
@@ -156,7 +166,7 @@ export default function RideshareCard({
       <div className="flex flex-wrap items-start justify-between gap-x-3 gap-y-2">
         <div className="flex flex-col">
           <p className="font-display font-bold text-h2-m md:font-semibold md:text-h3 whitespace-nowrap">
-            Arrives {formatRideTime(ride.arrival_time)}
+            {rideTimeLabel(ride)}
           </p>
           <p className="text-small-m font-semibold md:text-sm md:leading-5 md:font-medium text-lift-secondary">
             {formatRideDay(ride.arrival_time)}
