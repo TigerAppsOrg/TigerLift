@@ -85,9 +85,9 @@ def api_dashboard():
         None
 
     Returns:
-        JSON: user information provided by CAS, all the rides, and
-              a mapping of available and upcoming rideshares, sorted by
-              upcoming date
+        JSON: user information provided by CAS, all upcoming rideshares
+              (including full ones), sorted by upcoming date, and a mapping
+              of the user's ride request statuses
     """
 
     user_info = _cas.authenticate()
@@ -114,10 +114,8 @@ def api_dashboard():
             "note": ride[11],
         }
 
-        if (
-            updated_ride["arrival_time"] > current_time
-            and len(updated_ride["current_riders"]) < updated_ride["max_capacity"]
-        ):
+        # full rides are included too; Home shows them with a "Full" button
+        if updated_ride["arrival_time"] > current_time:
             updated_rides.append(updated_ride)
 
     updated_rides.sort(key=lambda ride: ride["arrival_time"])
