@@ -55,12 +55,17 @@ function App() {
         {user ? (
           <div className="h-full">
             <Navbar user_info={user} />
-            <Routes>
-              <Route path="/" element={<Navigate to="/allrides" replace />} />
-              <Route path="/allrides" element={<AllRides />} />
-              <Route path="/myrides" element={<MyRides />} />
-              <Route path="/*" element={<NotFound />} />
-            </Routes>
+            {/* On mobile the nav is a fixed bottom tab bar; pad the page so
+                its last content clears the bar and the create button's
+                32px overhang. */}
+            <main className="pb-[calc(theme(spacing.tabbar)+theme(spacing.8))] md:pb-0">
+              <Routes>
+                <Route path="/" element={<Navigate to="/allrides" replace />} />
+                <Route path="/allrides" element={<AllRides />} />
+                <Route path="/myrides" element={<MyRides />} />
+                <Route path="/*" element={<NotFound />} />
+              </Routes>
+            </main>
           </div>
         ) : (
           <div className="text-center flex flex-col items-center justify-center gap-8 overflow-y-auto py-10 max-md:px-4">

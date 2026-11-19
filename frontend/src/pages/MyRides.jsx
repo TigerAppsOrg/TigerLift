@@ -15,7 +15,6 @@ import {
   capitalizeFirstLetter,
   handleShowPopupMessage,
   renderRideCardInfo,
-  bigButtonStyling1,
   getGoogleCalendarUrl,
   tapTargetInline,
 } from "../utils/utils";
@@ -288,7 +287,7 @@ export default function MyRides() {
         />
       )}
       <div className="flex gap-4 items-center">
-        {/* phones use the menu to go back, so only the title shows there */}
+        {/* The mobile tab bar returns home, so the back button is desktop only. */}
         <IconButton
           type="back"
           onClick={() => navigate("/allrides")}
@@ -311,7 +310,8 @@ export default function MyRides() {
           </p>
         )}
         <Button
-          className={`self-start mt-4 ${bigButtonStyling1} max-md:self-stretch`}
+          variant="secondary"
+          className="self-start mt-4 max-md:self-stretch"
           onClick={() => setShowPastRides(!showPastRides)}
         >
           {showPastRides

@@ -1,3 +1,4 @@
+import { buttonClasses } from "../styles/buttonClasses";
 import { statusPillStyling } from "../utils/utils";
 
 export default function Button({
@@ -7,7 +8,31 @@ export default function Button({
   className = "",
   children,
   status = "",
+  variant,
+  size,
+  type,
+  ...rest
 }) {
+  // Design-system path: only used when a variant is passed, so every
+  // existing call site keeps its exact legacy output below.
+  if (variant) {
+    return (
+      <button
+        type={type || "button"}
+        onClick={onClick}
+        className={`${buttonClasses({
+          variant,
+          size,
+          disabled: disabled || loading,
+        })} ${loading ? "cursor-progress" : ""} ${className}`}
+        disabled={loading || disabled}
+        {...rest}
+      >
+        {children}
+      </button>
+    );
+  }
+
   const buttonStyling = statusPillStyling[status]
     ? `px-3 rounded-full ${statusPillStyling[status]}`
     : "";
@@ -20,12 +45,13 @@ export default function Button({
 
   return (
     <button
+      type={type}
       onClick={onClick}
       className={`py-1.5 px-3 font-medium ${
         buttonStyling ? buttonStyling : "px-2.5 rounded-md"
       } ${isAction ? "max-md:min-h-11" : ""} ${className} ${
         disabled
-          ? `${disabledStyling} 
+          ? `${disabledStyling}
            cursor-not-allowed hover:bg-zinc-100`
           : ""
       } ${
