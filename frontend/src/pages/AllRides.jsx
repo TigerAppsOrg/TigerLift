@@ -1,6 +1,6 @@
 // importing necessary libraries and components
 import { useRef, useState, useEffect } from "react";
-import { Link } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import DateTimePicker from "../components/DateTimePicker.jsx";
 import RideCard from "../components/RideCard.jsx";
 import Button from "../components/Button.jsx";
@@ -24,7 +24,6 @@ import {
   renderRideCardInfo,
   renderToAndFrom,
   placeToLocation,
-  bigButtonStyling1,
   flipFields,
   NOTE_MAX_LENGTH,
   normalizePhoneNumber,
@@ -291,6 +290,19 @@ export default function AllRides() {
     setCreateRideModal(true);
   };
 
+  // The nav bar's "Create a rideshare" button (desktop) and + button (mobile)
+  // navigate here with state { openCreate: true }. Open the modal, then clear
+  // that state so a refresh or back navigation does not reopen it.
+  const location = useLocation();
+  const navigate = useNavigate();
+  useEffect(() => {
+    if (location.state?.openCreate) {
+      handleOpenRideModal();
+      navigate(location.pathname, { replace: true, state: null });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.key]);
+
   // Closes Create Ride Modal, reset corresponding input fields
   const handleCloseRideModal = () => {
     setCreateRideModal(false);
@@ -549,20 +561,6 @@ export default function AllRides() {
         />
       )}
       <div className="flex flex-col space-y-6">
-        <div className="flex justify-between items-center">
-          <Link
-            to="/myrides"
-            className={`hidden md:inline-block ${bigButtonStyling1}`}
-          >
-            My Rideshares
-          </Link>
-          <Button
-            className={`${bigButtonStyling1}`}
-            onClick={() => handleOpenRideModal()}
-          >
-            Create a Rideshare
-          </Button>
-        </div>
         <div
           className={`grid grid-cols-1 md:grid-cols-2 ${
             inSearch

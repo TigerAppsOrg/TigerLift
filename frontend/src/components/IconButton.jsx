@@ -3,6 +3,7 @@ export default function IconButton({
   onClick,
   disabled = false,
   className,
+  ariaLabel,
 }) {
   const renderIcon = () => {
     switch (type) {
@@ -117,6 +118,7 @@ export default function IconButton({
     <button
       onClick={onClick}
       disabled={disabled}
+      aria-label={ariaLabel}
       className={`rounded-full p-1.5 flex items-center justify-center ${className}`}
     >
       {renderIcon()}
