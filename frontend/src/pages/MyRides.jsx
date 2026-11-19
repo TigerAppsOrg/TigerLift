@@ -16,7 +16,9 @@ import {
   handleShowPopupMessage,
   renderRideCardInfo,
   getGoogleCalendarUrl,
+  tapTargetInline,
 } from "../utils/utils";
+import useIsMobile from "../utils/useIsMobile";
 
 // For parsing date
 import utc from "dayjs/plugin/utc";
@@ -47,6 +49,15 @@ export default function MyRides() {
 
   const [editingRideId, setEditingRideId] = useState(null);
   const [cancelRequestRideId, setCancelRequestRideId] = useState(null);
+  const isMobile = useIsMobile();
+
+  // on phones the editor can open far down the page; bring it into view
+  useEffect(() => {
+    if (editingRideId === null || !isMobile) return;
+    document
+      .querySelector('[data-testid="ride-editor"]')
+      ?.scrollIntoView({ block: "start", behavior: "smooth" });
+  }, [editingRideId, isMobile]);
 
   const [popupMessageInfo, setPopupMessageInfo] = useState({
     status: "",
@@ -158,7 +169,7 @@ export default function MyRides() {
             <CopyEmailButton
               copy={ride.current_riders.map((rider) => rider[2])}
               text="Copy All Rider Emails"
-              className="inline-flex text-theme_medium_2 hover:text-theme_dark_2 align-middle"
+              className={`inline-flex text-theme_medium_2 hover:text-theme_dark_2 align-middle ${tapTargetInline}`}
             />
           )}
         </span>
@@ -166,14 +177,14 @@ export default function MyRides() {
       {ride.current_riders.length > 0 ? (
         <div className="flex flex-col gap-2 mt-1">
           {ride.current_riders.map(([netid, fullName, email]) => (
-            <Pill email={email} key={netid}>
+            <Pill email={email} key={netid} className="max-md:py-0">
               <div className="w-full flex items-center justify-between">
                 {fullName}
                 {isUpcoming && (
                   <CopyEmailButton
                     copy={[email]}
                     text="Copy Email"
-                    className="text-zinc-800 hover:text-zinc-600"
+                    className={`text-zinc-800 hover:text-zinc-600 ${tapTargetInline}`}
                   />
                 )}
               </div>
@@ -241,13 +252,16 @@ export default function MyRides() {
       >
         <div>
           {renderKindLabel(ride.kind)}
-          {renderRideCardInfo(ride, { showRiders: !isPosted })}
+          {renderRideCardInfo(ride, {
+            showRiders: !isPosted,
+            status: !isPosted ? ride.request_status : "",
+          })}
           {isUpcoming && (isPosted || ride.request_status === "accepted") && (
             <a
               href={getGoogleCalendarUrl(ride)}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-block my-1 text-theme_medium_2 hover:text-theme_dark_2 underline"
+              className={`inline-block my-1 text-theme_medium_2 hover:text-theme_dark_2 underline ${tapTargetInline}`}
             >
               Add to Google Calendar
             </a>
@@ -259,24 +273,26 @@ export default function MyRides() {
   };
 
   const renderRideCards = (rides, isUpcoming) => (
-    <div className="flex flex-col sm:grid sm:grid-cols-2 md:grid-cols-3 gap-5">
+    <div className="flex flex-col sm:grid sm:grid-cols-2 md:grid-cols-3 gap-5 max-md:gap-4">
       {rides.map((ride) => renderRideCard(ride, isUpcoming))}
     </div>
   );
 
   return (
-    <div className="flex flex-col gap-6 p-8 pb-14">
+    <div className="flex flex-col gap-6 p-4 pb-14 md:p-8 max-md:gap-4">
       {popupMessageInfo.message && (
         <PopUpMessage
           status={popupMessageInfo.status}
           message={popupMessageInfo.message}
         />
       )}
-      <div className="hidden md:flex gap-4 items-center">
+      <div className="flex gap-4 items-center">
+        {/* The mobile tab bar returns home, so the back button is desktop only. */}
         <IconButton
           type="back"
           onClick={() => navigate("/allrides")}
-          className="w-9 h-9 hover:bg-theme_medium_2"
+          ariaLabel="Back to All Rideshares"
+          className="max-md:hidden w-9 h-9 hover:bg-theme_medium_2"
         />
         <h2 className="text-2xl font-semibold">My Rideshares</h2>
       </div>
@@ -295,7 +311,7 @@ export default function MyRides() {
         )}
         <Button
           variant="secondary"
-          className="self-start mt-4"
+          className="self-start mt-4 max-md:self-stretch"
           onClick={() => setShowPastRides(!showPastRides)}
         >
           {showPastRides
