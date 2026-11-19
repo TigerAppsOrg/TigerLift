@@ -11,7 +11,9 @@ CREATE TABLE Rides (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     current_riders TEXT[][],
     note VARCHAR(300),
-    phone_number VARCHAR(20)
+    phone_number VARCHAR(20),
+    departure_start TIMESTAMP,
+    departure_end TIMESTAMP
 );
 
 CREATE TABLE IF NOT EXISTS RideRequests (

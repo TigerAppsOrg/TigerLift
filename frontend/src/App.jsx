@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
 import { Navigate, Routes, Route } from "react-router-dom";
 import { ConfigProvider } from "antd";
-import AllRides from "./pages/AllRides";
+import Home from "./pages/Home";
+import RideDetails from "./pages/RideDetails";
 import MyRides from "./pages/MyRides";
 import NotFound from "./pages/NotFound";
 import Navbar from "./components/Navbar";
@@ -61,7 +62,8 @@ function App() {
             <main className="pb-[calc(theme(spacing.tabbar)+theme(spacing.8))] md:pb-0">
               <Routes>
                 <Route path="/" element={<Navigate to="/allrides" replace />} />
-                <Route path="/allrides" element={<AllRides />} />
+                <Route path="/allrides" element={<Home user_info={user} />} />
+                <Route path="/rides/:rideId" element={<RideDetails />} />
                 <Route path="/myrides" element={<MyRides />} />
                 <Route path="/*" element={<NotFound />} />
               </Routes>

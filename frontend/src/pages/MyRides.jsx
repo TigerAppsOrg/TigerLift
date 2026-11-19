@@ -11,6 +11,7 @@ import CopyEmailButton from "../components/CopyEmailButton";
 import PopUpMessage from "../components/PopUpMessage";
 import LoadingIcon from "../components/LoadingIcon";
 import useAutoRefresh from "../utils/useAutoRefresh";
+import { RIDES_CHANGED_EVENT } from "../utils/useRidesData";
 import {
   capitalizeFirstLetter,
   handleShowPopupMessage,
@@ -91,6 +92,12 @@ export default function MyRides() {
 
   // pick up changes made by other users, e.g. the poster removing this rider
   useAutoRefresh(fetchMyRidesData);
+
+  // refresh after the user creates a ride from the navbar
+  useEffect(() => {
+    window.addEventListener(RIDES_CHANGED_EVENT, fetchMyRidesData);
+    return () => window.removeEventListener(RIDES_CHANGED_EVENT, fetchMyRidesData);
+  }, []);
 
   // load rides data, including when navigated to again from notifications
   useEffect(() => {
