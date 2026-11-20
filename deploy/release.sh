@@ -41,16 +41,21 @@ fi
 cd "$release/backend"
 "$release/venv/bin/python" - "/var/backups/tigerlift/$sha.dump" <<'PY'
 import os, subprocess, sys
-from urllib.parse import urlsplit, unquote
+from urllib.parse import urlsplit, unquote, parse_qs
 from dotenv import load_dotenv
 load_dotenv('.env')
 u = urlsplit(os.environ['DATABASE_URL'])
 env = dict(os.environ, PGHOST=u.hostname, PGPORT=str(u.port or 5432),
            PGUSER=unquote(u.username or ''), PGPASSWORD=unquote(u.password or ''),
            PGDATABASE=unquote(u.path.lstrip('/')))
-# pg_dump uses libpq to honor connection parameters, without putting credentials in argv.
-env['PGDATABASE'] = os.environ['DATABASE_URL']
-subprocess.run(['pg_dump', '--format=custom', '--file=' + sys.argv[1]], env=env, check=True)
+# libpq environment fields are individual values, not a connection URI.
+for key, value in parse_qs(u.query).items():
+    if key in ('sslmode', 'sslrootcert', 'sslcert', 'sslkey', 'connect_timeout'):
+        env['PG' + key.upper()] = value[-1]
+result = subprocess.run(['pg_dump', '--format=custom', '--file=' + sys.argv[1]],
+                        env=env, capture_output=True)
+if result.returncode:
+    raise SystemExit('Database backup failed; deployment stopped before migration.')
 PY
 sudo -u ubuntu "$release/venv/bin/python" -c 'import database; database.database_setup()'
 # Preflight imports and serves the expected frontend without sending mail or writing user data.
