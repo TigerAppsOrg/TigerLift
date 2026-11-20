@@ -38,6 +38,7 @@ jobs:
         env:
           TEST_DATABASE_URL: postgresql://tigerlift:test-only@localhost:5432/tigerlift_test
           EMAILS_ON: 'False'
+      - run: python -m unittest discover -s deploy/tests -v
       - run: bash -n deploy/release.sh
       - run: npm ci && npm run build
         working-directory: frontend
