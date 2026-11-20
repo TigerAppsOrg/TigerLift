@@ -70,11 +70,12 @@ def database_setup():
                 conn.commit()
                 print("Tables created successfully!")
         except Exception as e:
-            print(f"Error creating tables: {e}")
+            conn.rollback()
+            raise RuntimeError("Database setup failed") from e
         finally:
             conn.close()
     else:
-        print("Connection not established.")
+        raise RuntimeError("Database connection unavailable during setup")
 
     run_migrations()
 
@@ -117,11 +118,11 @@ def run_migrations():
                 conn.commit()
         except Exception as e:
             conn.rollback()
-            print(f"Error running migrations: {e}")
+            raise RuntimeError("Database migrations failed") from e
         finally:
             conn.close()
     else:
-        print("Connection not established.")
+        raise RuntimeError("Database connection unavailable during migration")
 
 
 def connect():
