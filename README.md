@@ -86,6 +86,13 @@ To use a different test database, set `TEST_DATABASE_URL`.
 
 ### Deploying
 
-- `cd frontend` and run `npm run build`. This will create a `dist` folder in `frontend`.
-- Commit that new `dist` folder.
-- Navigate to https://lift.tigerapps.org/.
+Production runs on AWS EC2, not Heroku. Merging to `main` runs the **Check and
+deploy TigerLift** GitHub Actions workflow: backend tests against an isolated
+PostgreSQL database, a fresh frontend build, then deployment over AWS SSM.
+There is no separate frontend build PR and no need to commit `frontend/dist`.
+
+The workflow uses GitHub OIDC and the narrowly scoped `TigerLiftGitHubDeployRole`.
+Its only build secret is `VITE_GOOGLE_API_KEY`; production database and mail
+credentials stay on the server. Pull requests run checks without deployment access.
+
+See [deployment operations](deploy/README.md) for health checks, rollback and host setup.
