@@ -253,6 +253,8 @@ export default function MyRides() {
           isPast={isPast}
           respondingTo={respondingTo}
           onRespond={handleRespond}
+          // fills the grid row, so side-by-side panels end together
+          className="flex-1"
         />
       </div>
     );

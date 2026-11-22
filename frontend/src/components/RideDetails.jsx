@@ -227,10 +227,19 @@ function PastDetails({ ride }) {
  *   isPast        whether it is a past ride
  *   respondingTo  "rideid:netid" of the request being answered, or null
  *   onRespond     (ride, netid, "accept" | "reject") for incoming requests
+ *   className     extra classes for the panel
  */
-export default function RideDetails({ ride, isPast, respondingTo, onRespond }) {
+export default function RideDetails({
+  ride,
+  isPast,
+  respondingTo,
+  onRespond,
+  className = "",
+}) {
   return (
-    <div className="bg-surface-subtle rounded-lg px-4 py-3 flex flex-col gap-3">
+    <div
+      className={`bg-surface-subtle rounded-lg px-4 py-3 flex flex-col gap-3 ${className}`}
+    >
       {isPast ? (
         <PastDetails ride={ride} />
       ) : ride.kind === "posted" ? (
