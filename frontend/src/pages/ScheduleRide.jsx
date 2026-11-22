@@ -122,7 +122,7 @@ function LocationRow({
         onKeyDown={(e) => e.key === "Enter" && e.preventDefault()}
         aria-invalid={errorId ? true : undefined}
         aria-describedby={errorId}
-        className="w-full min-w-0 bg-transparent border-0 p-0 outline-none font-display text-mobile-h3 md:text-desktop-h3 text-content-primary placeholder:text-content-placeholder"
+        className="w-full min-w-0 text-ellipsis bg-transparent border-0 p-0 outline-none font-display text-mobile-h3 md:text-desktop-h3 text-content-primary placeholder:text-content-placeholder"
       />
       <PlaceDetail place={place} />
       {children}
