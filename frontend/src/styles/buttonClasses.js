@@ -16,6 +16,9 @@ const VARIANTS = {
   // Figma Request Card "Accept" (node 132:1596); sizes use the primary set
   success:
     "bg-status-success text-content-on-inverse hover:opacity-90 hover:text-content-on-inverse active:opacity-90",
+  // destructive confirm (e.g. "Delete Rideshare"), on the status-danger token
+  danger:
+    "bg-status-danger text-content-on-danger hover:opacity-90 hover:text-content-on-danger active:opacity-90",
 };
 
 const SIZES = {
