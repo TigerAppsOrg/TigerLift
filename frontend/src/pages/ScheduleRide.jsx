@@ -280,7 +280,7 @@ export default function ScheduleRide({ user }) {
         >
           <div className="flex items-center justify-center gap-6 md:justify-start">
             <IconButton
-              type="back"
+              type="arrowLeft"
               onClick={goBack}
               ariaLabel="Back"
               className="max-md:hidden size-8 text-content-primary hover:bg-surface-subtle"
