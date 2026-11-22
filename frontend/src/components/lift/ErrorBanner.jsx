@@ -13,13 +13,7 @@ export default function ErrorBanner({
       role="alert"
       className={`bg-status-danger-bg rounded-lg pl-4 pr-3 py-3 flex items-center gap-3 ${className}`}
     >
-      <img
-        src={alertIcon}
-        alt=""
-        width="24"
-        height="24"
-        className="shrink-0"
-      />
+      <img src={alertIcon} alt="" width="24" height="24" className="shrink-0" />
       <p className="flex-1 text-desktop-small text-status-danger-text">
         {message}
       </p>

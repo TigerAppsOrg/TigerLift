@@ -148,7 +148,7 @@ export default function ScheduleRide({ user }) {
       originRef,
       destinationRef,
       setOrigin,
-      setDestination
+      setDestination,
     );
     clearError("origin", "destination");
   };
@@ -164,14 +164,14 @@ export default function ScheduleRide({ user }) {
     const target = found.origin
       ? originRef.current
       : found.destination
-      ? destinationRef.current
-      : found.dateTime
-      ? document.getElementById(
-          !date || !date.isValid() ? "schedule-date" : "schedule-time"
-        )
-      : found.phone
-      ? phoneRef.current
-      : null;
+        ? destinationRef.current
+        : found.dateTime
+          ? document.getElementById(
+              !date || !date.isValid() ? "schedule-date" : "schedule-time",
+            )
+          : found.phone
+            ? phoneRef.current
+            : null;
     target?.focus();
   };
 

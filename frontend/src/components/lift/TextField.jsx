@@ -20,7 +20,7 @@ const TextField = forwardRef(function TextField(
     maxLength,
     ...inputProps
   },
-  ref
+  ref,
 ) {
   const autoId = useId();
   const fieldId = id || autoId;
