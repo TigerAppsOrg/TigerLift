@@ -1,30 +1,25 @@
-// importing necessary libraries and components
-import React, { useState, useEffect } from "react";
-import RideCard from "../components/RideCard";
+import { useState, useEffect } from "react";
+import { useNavigate, useLocation, useSearchParams } from "react-router-dom";
 import RideEditor from "../components/RideEditor";
+import RideDetails from "../components/RideDetails";
 import Button from "../components/Button";
-import Pill from "../components/Pill";
-import IconButton from "../components/IconButton";
-import { useNavigate, useLocation } from "react-router-dom";
-import dayjs from "dayjs";
-import CopyEmailButton from "../components/CopyEmailButton";
 import PopUpMessage from "../components/PopUpMessage";
-import LoadingIcon from "../components/LoadingIcon";
+import RideshareCard from "../components/lift/RideshareCard";
+import RideCardSkeleton from "../components/lift/RideCardSkeleton";
+import EmptyState from "../components/lift/EmptyState";
+import ErrorBanner from "../components/lift/ErrorBanner";
+import carIcon from "../assets/figma/car.svg";
 import useAutoRefresh from "../utils/useAutoRefresh";
-import {
-  capitalizeFirstLetter,
-  handleShowPopupMessage,
-  renderRideCardInfo,
-  getGoogleCalendarUrl,
-  tapTargetInline,
-} from "../utils/utils";
 import useIsMobile from "../utils/useIsMobile";
+import { getRideCardStatus } from "../utils/rides";
+import { handleShowPopupMessage } from "../utils/utils";
 
-// For parsing date
-import utc from "dayjs/plugin/utc";
-import timezone from "dayjs/plugin/timezone";
-dayjs.extend(utc);
-dayjs.extend(timezone);
+// Your Rides, from Figma "My Rides" (desktop 57:1300, mobile 22:579) with
+// its loading, empty and error states. Every ride uses the shared
+// RideshareCard; poster-only extras (riders, requests to join) sit in a
+// RideDetails panel under the card.
+
+const HIGHLIGHT_MS = 2500;
 
 // tags each ride with whether the user posted or requested it, sorted by arrival
 const mergeRides = (posted, requested, newestFirst) =>
@@ -36,20 +31,44 @@ const mergeRides = (posted, requested, newestFirst) =>
     return newestFirst ? -diff : diff;
   });
 
-// Displaying and managing all Rides that user requested or created
+const SECTION_HEADING =
+  "font-display text-mobile-h2 md:text-desktop-h2 text-content-primary";
+const GROUP_HEADING =
+  "flex items-center gap-2.5 text-mobile-subhead md:text-desktop-subhead text-content-primary";
+
+function LimeDot() {
+  return (
+    <span
+      aria-hidden="true"
+      className="inline-block size-6 shrink-0 rounded-full bg-fill-accent"
+    />
+  );
+}
+
 export default function MyRides() {
   const navigate = useNavigate();
   const location = useLocation();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const newRideId = searchParams.get("ride");
+  const isMobile = useIsMobile();
 
-  // state variables that manage RidesData
-  const [activeRides, setActiveRides] = useState([]);
-  const [pastRides, setPastRides] = useState([]);
+  // null until the first successful load
+  const [rides, setRides] = useState(null); // { netid, active, past }
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [showPastRides, setShowPastRides] = useState(false);
-  const [loading, setLoading] = useState(true); // loading indicator
 
   const [editingRideId, setEditingRideId] = useState(null);
   const [cancelRequestRideId, setCancelRequestRideId] = useState(null);
-  const isMobile = useIsMobile();
+  const [respondingTo, setRespondingTo] = useState(null); // "rideid:netid"
+  const [highlightKey, setHighlightKey] = useState(null);
+
+  const [popupMessageInfo, setPopupMessageInfo] = useState({
+    status: "",
+    message: "",
+  });
+  const showPopup = (status, message) =>
+    handleShowPopupMessage(setPopupMessageInfo, status, message);
 
   // on phones the editor can open far down the page; bring it into view
   useEffect(() => {
@@ -59,60 +78,86 @@ export default function MyRides() {
       ?.scrollIntoView({ block: "start", behavior: "smooth" });
   }, [editingRideId, isMobile]);
 
-  const [popupMessageInfo, setPopupMessageInfo] = useState({
-    status: "",
-    message: "",
-  });
-
   // fetch user's rides data from the server
   const fetchMyRidesData = async () => {
-    const endpoint = "/api/myrides";
     try {
-      const response = await fetch(endpoint);
+      const response = await fetch("/api/myrides");
       if (!response.ok) {
         throw new Error(`Error: ${response.statusText}`);
       }
       const data = await response.json();
-
-      setActiveRides(
-        mergeRides(
+      setRides({
+        netid: data.user_info?.netid,
+        active: mergeRides(
           data.upcoming_posted_rides,
           data.upcoming_requested_rides,
-          false
-        )
-      );
-      setPastRides(
-        mergeRides(data.past_posted_rides, data.past_requested_rides, true)
-      );
+          false,
+        ),
+        past: mergeRides(
+          data.past_posted_rides,
+          data.past_requested_rides,
+          true,
+        ),
+      });
+      setLoadError(false);
     } catch (error) {
       console.error("Error fetching rides:", error);
+      setLoadError(true);
     }
   };
 
   // pick up changes made by other users, e.g. the poster removing this rider
   useAutoRefresh(fetchMyRidesData);
 
+  const loadData = async () => {
+    setLoading(true);
+    try {
+      await fetchMyRidesData();
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // load rides data, including when navigated to again from notifications
   useEffect(() => {
-    const loadData = async () => {
-      setLoading(true);
-      try {
-        await fetchMyRidesData();
-      } finally {
-        setLoading(false);
-      }
-    };
-
     loadData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [location.key]);
+
+  // A message passed from another page (e.g. "Rideshare successfully
+  // created!" from Schedule a Ride). Show it once, then clear it so a
+  // refresh does not show it again.
+  useEffect(() => {
+    const flash = location.state?.flash;
+    if (!flash) return;
+    showPopup(flash.status, flash.message);
+    navigate(location.pathname + location.search, {
+      replace: true,
+      state: null,
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.state]);
+
+  // After posting, /myrides?ride=<id> scrolls to the new ride and outlines
+  // it briefly, then drops the parameter.
+  useEffect(() => {
+    if (!newRideId || !rides) return;
+    const key = `posted-${newRideId}`;
+    document
+      .querySelector(`[data-ride-id="${key}"]`)
+      ?.scrollIntoView({ block: "center", behavior: "smooth" });
+    setHighlightKey(key);
+    const timer = setTimeout(() => {
+      setHighlightKey(null);
+      setSearchParams({}, { replace: true });
+    }, HIGHLIGHT_MS);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [newRideId, rides !== null]);
 
   // called by the editor after a save or delete finishes
   const handleEditDone = async (responseData) => {
-    handleShowPopupMessage(
-      setPopupMessageInfo,
-      responseData.success,
-      responseData.message
-    );
+    showPopup(responseData.success, responseData.message);
     await fetchMyRidesData();
     setEditingRideId(null);
   };
@@ -123,208 +168,228 @@ export default function MyRides() {
     try {
       const response = await fetch("/api/cancelriderequest", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          rideid: rideid,
-        }),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ rideid }),
       });
       const responseData = await response.json();
-      handleShowPopupMessage(
-        setPopupMessageInfo,
-        responseData.success,
-        responseData.message
-      );
+      showPopup(responseData.success, responseData.message);
       await fetchMyRidesData();
-      if (!response.ok) {
-        console.error("Request failed:", response.status);
-      }
     } catch (error) {
       console.error("Error during fetch:", error);
+      showPopup(false, "Couldn't cancel your request. Try again.");
     }
     setCancelRequestRideId(null);
   };
 
-  const renderKindLabel = (kind) => (
-    <span
-      className={`inline-block mb-2 px-2.5 py-0.5 rounded-full text-sm font-medium ${
-        kind === "posted"
-          ? "bg-theme_light_1 text-theme_dark_1"
-          : "bg-zinc-200 text-zinc-700"
-      }`}
-    >
-      {kind === "posted" ? "Posted" : "Requested"}
-    </span>
-  );
+  // accept or deny a request to join one of the user's rides
+  const handleRespond = async (ride, netid, action) => {
+    setRespondingTo(`${ride.id}:${netid}`);
+    try {
+      const response = await fetch("/api/respondtorequest", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ rideid: ride.id, requester_id: netid, action }),
+      });
+      const responseData = await response.json();
+      showPopup(responseData.success, responseData.message);
+      await fetchMyRidesData();
+    } catch (error) {
+      console.error("Error during fetch:", error);
+      showPopup(false, "Couldn't answer the request. Try again.");
+    }
+    setRespondingTo(null);
+  };
 
-  const renderPostedRideDetails = (ride, isUpcoming) => (
-    <div>
-      <p>
-        <span className="flex items-center justify-between">
-          <span className="font-semibold">
-            {isUpcoming ? "Current Riders:" : "Rode with:"}
-          </span>
-          {isUpcoming && ride.current_riders.length > 0 && (
-            <CopyEmailButton
-              copy={ride.current_riders.map((rider) => rider[2])}
-              text="Copy All Rider Emails"
-              className={`inline-flex text-theme_medium_2 hover:text-theme_dark_2 align-middle ${tapTargetInline}`}
-            />
-          )}
-        </span>
-      </p>
-      {ride.current_riders.length > 0 ? (
-        <div className="flex flex-col gap-2 mt-1">
-          {ride.current_riders.map(([netid, fullName, email]) => (
-            <Pill email={email} key={netid} className="max-md:py-0">
-              <div className="w-full flex items-center justify-between">
-                {fullName}
-                {isUpcoming && (
-                  <CopyEmailButton
-                    copy={[email]}
-                    text="Copy Email"
-                    className={`text-zinc-800 hover:text-zinc-600 ${tapTargetInline}`}
-                  />
-                )}
-              </div>
-            </Pill>
-          ))}
-        </div>
-      ) : (
-        <p className="text-zinc-500 text-sm">
-          {isUpcoming ? "No current riders." : "None."}
-        </p>
-      )}
-      {isUpcoming && ride.requested_riders.length > 0 && (
-        <p className="mt-2 text-sm font-medium text-theme_dark_1">
-          {ride.requested_riders.length} pending{" "}
-          {ride.requested_riders.length === 1 ? "request" : "requests"}. Click
-          Edit to respond.
-        </p>
-      )}
-    </div>
-  );
+  const getCardAction = (ride, isPast) => {
+    if (isPast) return undefined;
+    if (ride.kind === "posted") {
+      return {
+        label: "Edit",
+        onClick: () => setEditingRideId(ride.id),
+        disabled: editingRideId !== null,
+      };
+    }
+    if (ride.request_status === "pending") {
+      return cancelRequestRideId === ride.id
+        ? { label: "Cancelling…", disabled: true }
+        : {
+            label: "Cancel request",
+            variant: "outline",
+            onClick: () => handleCancelRideRequest(ride.id),
+            disabled: cancelRequestRideId !== null,
+          };
+    }
+    return undefined;
+  };
 
-  const renderRideCard = (ride, isUpcoming) => {
-    const isPosted = ride.kind === "posted";
-    if (isPosted && ride.id === editingRideId) {
+  const renderRide = (ride, isPast, spanBoth) => {
+    const key = `${ride.kind}-${ride.id}`;
+    const span = spanBoth ? "lg:col-span-2" : "";
+
+    if (!isPast && ride.kind === "posted" && ride.id === editingRideId) {
       return (
-        <RideEditor
-          key={`${ride.kind}-${ride.id}`}
-          ride={ride}
-          onDone={handleEditDone}
-          onCancel={() => setEditingRideId(null)}
-        />
+        <div key={key} data-ride-id={key} className={span}>
+          <RideEditor
+            ride={ride}
+            onDone={handleEditDone}
+            onCancel={() => setEditingRideId(null)}
+          />
+        </div>
       );
     }
 
-    const canCancelRequest =
-      !isPosted && isUpcoming && ride.request_status === "pending";
+    const status = isPast
+      ? "past"
+      : getRideCardStatus(ride, rides.netid, ride.request_status);
 
     return (
-      <RideCard
-        key={`${ride.kind}-${ride.id}`}
-        buttonText={
-          isUpcoming && (isPosted ? "Edit" : canCancelRequest && "Cancel Request")
-        }
-        buttonOnClick={
-          isPosted
-            ? () => editingRideId === null && setEditingRideId(ride.id)
-            : canCancelRequest
-            ? () => handleCancelRideRequest(ride.id)
-            : () => {}
-        }
-        buttonClassName={
-          isUpcoming && (isPosted || canCancelRequest)
-            ? isPosted && editingRideId !== null
-              ? "bg-zinc-100 text-zinc-400 cursor-not-allowed"
-              : "bg-theme_medium_1 text-white font-medium hover:bg-theme_dark_1"
-            : "cursor-auto"
-        }
-        buttonLoading={ride.id === cancelRequestRideId}
-        secondaryButtonText={
-          !isPosted && "Status: " + capitalizeFirstLetter(ride.request_status)
-        }
-        secondaryButtonOnClick={() => {}}
-        secondaryButtonClassName="cursor-auto"
-        secondaryButtonStatus={!isPosted ? ride.request_status : ""}
+      <div
+        key={key}
+        data-ride-id={key}
+        className={`flex flex-col gap-2 scroll-mt-24 rounded-lg ${span} ${
+          highlightKey === key
+            ? "outline outline-2 outline-offset-2 outline-line-inverse"
+            : ""
+        }`}
       >
-        <div>
-          {renderKindLabel(ride.kind)}
-          {renderRideCardInfo(ride, {
-            showRiders: !isPosted,
-            status: !isPosted ? ride.request_status : "",
-          })}
-          {isUpcoming && (isPosted || ride.request_status === "accepted") && (
-            <a
-              href={getGoogleCalendarUrl(ride)}
-              target="_blank"
-              rel="noopener noreferrer"
-              className={`inline-block my-1 text-theme_medium_2 hover:text-theme_dark_2 underline ${tapTargetInline}`}
-            >
-              Add to Google Calendar
-            </a>
-          )}
-          {isPosted && renderPostedRideDetails(ride, isUpcoming)}
-        </div>
-      </RideCard>
+        <RideshareCard
+          ride={ride}
+          status={status}
+          requestStatus={ride.request_status}
+          action={getCardAction(ride, isPast)}
+        />
+        <RideDetails
+          ride={ride}
+          isPast={isPast}
+          respondingTo={respondingTo}
+          onRespond={handleRespond}
+        />
+      </div>
     );
   };
 
-  const renderRideCards = (rides, isUpcoming) => (
-    <div className="flex flex-col sm:grid sm:grid-cols-2 md:grid-cols-3 gap-5 max-md:gap-4">
-      {rides.map((ride) => renderRideCard(ride, isUpcoming))}
+  const renderGrid = (list, isPast) => (
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-2 items-start">
+      {list.map((ride) => renderRide(ride, isPast, list.length === 1))}
     </div>
   );
 
+  const renderGroup = (title, list, { dot = false } = {}) =>
+    list.length > 0 && (
+      <div className="flex flex-col gap-2">
+        <h3 className={GROUP_HEADING}>
+          {dot && <LimeDot />}
+          {title} ({list.length})
+          {dot && <span className="sr-only">, with new requests to join</span>}
+        </h3>
+        {renderGrid(list, false)}
+      </div>
+    );
+
+  const renderUpcoming = () => {
+    if (!rides) {
+      if (loadError && !loading) {
+        return (
+          <ErrorBanner
+            message="Couldn't load your rides. Check your connection."
+            onRetry={loadData}
+          />
+        );
+      }
+      return (
+        <div aria-busy="true" className="flex flex-col gap-2">
+          <span className="sr-only">Loading your rides</span>
+          <RideCardSkeleton />
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-2">
+            <RideCardSkeleton />
+            <RideCardSkeleton />
+          </div>
+        </div>
+      );
+    }
+
+    const posted = rides.active.filter((ride) => ride.kind === "posted");
+    const requested = rides.active.filter((ride) => ride.kind === "requested");
+    const hasRequests = posted.some(
+      (ride) => (ride.requested_riders || []).length > 0,
+    );
+
+    return (
+      <>
+        {loadError && (
+          <ErrorBanner
+            message="Couldn't refresh your rides. Check your connection."
+            onRetry={loadData}
+          />
+        )}
+        {rides.active.length === 0 ? (
+          <EmptyState
+            icon={carIcon}
+            title="No upcoming rides"
+            body="Rides you post or join will show up here."
+            action={{ label: "Find a ride", to: "/allrides" }}
+          />
+        ) : (
+          <div className="flex flex-col gap-6 md:gap-8">
+            {renderGroup("Rides you posted", posted, { dot: hasRequests })}
+            {renderGroup("Rides you requested", requested)}
+          </div>
+        )}
+      </>
+    );
+  };
+
   return (
-    <div className="flex flex-col gap-6 p-4 pb-14 md:p-8 max-md:gap-4">
+    <div className="px-gutter-mobile pt-4 pb-6 md:px-gutter md:py-12 flex flex-col gap-6 md:gap-12">
       {popupMessageInfo.message && (
         <PopUpMessage
           status={popupMessageInfo.status}
           message={popupMessageInfo.message}
         />
       )}
-      <div className="flex gap-4 items-center">
-        {/* The mobile tab bar returns home, so the back button is desktop only. */}
-        <IconButton
-          type="back"
-          onClick={() => navigate("/allrides")}
-          ariaLabel="Back to All Rideshares"
-          className="max-md:hidden w-9 h-9 hover:bg-theme_medium_2"
-        />
-        <h2 className="text-2xl font-semibold">My Rideshares</h2>
-      </div>
-      <div className="flex flex-col gap-2.5">
-        <h3 className="text-lg font-medium">
-          Active rideshares ({activeRides.length})
-        </h3>
-        {activeRides.length > 0 ? (
-          renderRideCards(activeRides, true)
-        ) : loading ? (
-          <LoadingIcon carColor="bg-theme_medium_2" />
-        ) : (
-          <p className="text-center">
-            No active rideshares. Post or request one from All Rideshares.
-          </p>
-        )}
-        <Button
-          variant="secondary"
-          className="self-start mt-4 max-md:self-stretch"
-          onClick={() => setShowPastRides(!showPastRides)}
+      <h1 className="sr-only">Your Rides</h1>
+
+      <section
+        aria-labelledby="upcoming-heading"
+        className="flex flex-col gap-2 md:gap-4"
+      >
+        <h2 id="upcoming-heading" className={SECTION_HEADING}>
+          Upcoming
+        </h2>
+        {renderUpcoming()}
+      </section>
+
+      {rides && (
+        <section
+          aria-labelledby="activity-heading"
+          className="flex flex-col gap-2 md:gap-4"
         >
-          {showPastRides
-            ? "Hide past rides"
-            : `Show past rides (${pastRides.length})`}
-        </Button>
-        {showPastRides &&
-          (pastRides.length > 0 ? (
-            renderRideCards(pastRides, false)
-          ) : (
-            <p className="text-center">No past rideshares.</p>
-          ))}
-      </div>
+          <Button
+            variant="secondary"
+            className="self-start max-md:self-stretch max-md:h-11"
+            aria-expanded={showPastRides}
+            onClick={() => setShowPastRides(!showPastRides)}
+          >
+            {showPastRides
+              ? "Hide past rides"
+              : `Show past rides (${rides.past.length})`}
+          </Button>
+          {showPastRides && (
+            <div className="flex flex-col gap-2 md:gap-4 mt-4 md:mt-8">
+              <h2 id="activity-heading" className={SECTION_HEADING}>
+                Your Activity
+              </h2>
+              {rides.past.length > 0 ? (
+                renderGrid(rides.past, true)
+              ) : (
+                <p className="text-mobile-small md:text-desktop-small text-content-secondary">
+                  No past rides.
+                </p>
+              )}
+            </div>
+          )}
+        </section>
+      )}
     </div>
   );
 }
