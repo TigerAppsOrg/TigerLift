@@ -16,6 +16,7 @@ import {
   normalizePhoneNumber,
   placeToLocation,
   flipFields,
+  getAirport,
   getAirportFullName,
 } from "../utils/utils";
 import { fromEasternWallTime } from "../utils/easternTime";
@@ -65,10 +66,22 @@ const validate = ({ origin, destination, date, time, phone }) => {
 };
 
 // Under a chosen place: the airport's full name (so PHL and EWR are hard to
-// confuse) or the place's address.
+// confuse) or the place's address. When the field already shows the
+// airport's name, the line adds its code and address instead of repeating it.
 function PlaceDetail({ place }) {
   if (!place?.place_id) return null;
-  const airportName = getAirportFullName(placeToLocation(place));
+  const location = placeToLocation(place);
+  const airportName = getAirportFullName(location);
+  const nameShown =
+    airportName &&
+    place.name &&
+    airportName.toLowerCase().includes(place.name.toLowerCase());
+  const code = getAirport(location)?.code;
+  const text = !airportName
+    ? place.formatted_address
+    : nameShown
+      ? [code, place.formatted_address].filter(Boolean).join(" · ")
+      : airportName;
   return (
     <p className="flex items-center gap-1 text-mobile-small md:text-desktop-small text-content-secondary">
       {airportName && (
@@ -82,7 +95,7 @@ function PlaceDetail({ place }) {
           <path d="M21 16v-2l-8-5V3.5a1.5 1.5 0 0 0-3 0V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5l8 2.5z" />
         </svg>
       )}
-      <span>{airportName || place.formatted_address}</span>
+      <span className="min-w-0">{text}</span>
     </p>
   );
 }
