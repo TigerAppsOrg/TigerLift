@@ -18,6 +18,10 @@ export default function MyDateTimePicker({
   timeId,
   status,
   suffixIcon,
+  // extra props for each picker, e.g. aria-label / aria-describedby /
+  // format / popupClassName
+  dateProps = {},
+  timeProps = {},
 }) {
   // on phones, tapping opens the picker without the on-screen keyboard
   const isMobile = useIsMobile();
@@ -82,6 +86,7 @@ export default function MyDateTimePicker({
         value={date}
         disabledDate={disabledDate}
         allowClear={allowClear}
+        {...dateProps}
       />
       <TimePicker
         className="max-md:!h-11 max-md:flex-1 max-md:!min-w-0"
@@ -98,6 +103,7 @@ export default function MyDateTimePicker({
         value={time}
         allowClear={allowClear}
         disabledTime={disabledTime}
+        {...timeProps}
       />
     </div>
   );

@@ -151,15 +151,20 @@ a:hover {
 .lift-picker .ant-picker:focus-within {
   border-color: var(--color-border-inverse);
 }
-.lift-picker .ant-picker-status-error,
-.lift-picker .ant-picker-status-error:hover {
+/* matches the 2px status-danger border of the other errored fields (Text
+   Input 205:159); the extra classes beat antd's css-in-js status rule */
+.lift-picker .ant-picker.ant-picker-status-error:not(.ant-picker-disabled),
+.lift-picker
+  .ant-picker.ant-picker-status-error:not(.ant-picker-disabled):hover,
+.lift-picker
+  .ant-picker.ant-picker-status-error:not(.ant-picker-disabled):focus-within {
   border-color: var(--color-status-danger);
   border-width: 2px;
 }
 .lift-picker .ant-picker .ant-picker-input > input {
   font-family: var(--font-sans);
-  font-size: 16px;
-  line-height: 24px;
+  font-size: theme("fontSize.mobile-body.0");
+  line-height: theme("fontSize.mobile-body.1.lineHeight");
   color: var(--color-text-primary);
 }
 .lift-picker .ant-picker .ant-picker-input > input::placeholder {
@@ -168,14 +173,55 @@ a:hover {
 .lift-picker .ant-picker .ant-picker-suffix {
   color: var(--color-icon-primary);
 }
-@media (min-width: 768px) {
+@media (min-width: theme("screens.md")) {
   .lift-picker .ant-picker .ant-picker-input > input {
-    font-size: 20px;
-    line-height: 24px;
+    font-size: theme("fontSize.desktop-body-xl.0");
+    line-height: theme("fontSize.desktop-body-xl.1.lineHeight");
   }
 }
 @media (max-width: 767.98px) {
   .lift-picker .ant-picker {
-    height: 44px !important;
+    height: theme("spacing.11") !important;
   }
+}
+
+/* The open calendar and time lists for .lift-picker: token colours instead
+   of antd's blue for the selected, today and hover states. The doubled
+   class outweighs antd's css-in-js rules. */
+.lift-picker-popup {
+  font-family: var(--font-sans);
+}
+.lift-picker-popup.ant-picker-dropdown
+  .ant-picker-cell-in-view.ant-picker-cell-selected:not(
+    .ant-picker-cell-disabled
+  )
+  .ant-picker-cell-inner,
+.lift-picker-popup.ant-picker-dropdown
+  .ant-picker-time-panel-column
+  > li.ant-picker-time-panel-cell-selected
+  .ant-picker-time-panel-cell-inner {
+  background: var(--color-fill-primary);
+  color: var(--color-text-on-inverse);
+}
+.lift-picker-popup.ant-picker-dropdown
+  .ant-picker-cell-in-view.ant-picker-cell-today
+  .ant-picker-cell-inner::before {
+  border-color: var(--color-border-inverse);
+}
+.lift-picker-popup.ant-picker-dropdown .ant-picker-today-btn,
+.lift-picker-popup.ant-picker-dropdown .ant-picker-now-btn,
+.lift-picker-popup.ant-picker-dropdown .ant-picker-header-view button:hover {
+  color: var(--color-text-primary);
+  text-decoration: underline;
+}
+.lift-picker-popup.ant-picker-dropdown
+  .ant-picker-ok
+  .ant-btn-primary:not(:disabled) {
+  background: var(--color-fill-primary);
+  box-shadow: none;
+}
+.lift-picker-popup.ant-picker-dropdown
+  .ant-picker-ok
+  .ant-btn-primary:not(:disabled):hover {
+  background: var(--color-fill-primary-pressed);
 }
