@@ -1,32 +1,23 @@
 // importing necessary libraries and components
 import { useRef, useState, useEffect } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
 import DateTimePicker from "../components/DateTimePicker.jsx";
 import RideCard from "../components/RideCard.jsx";
 import Button from "../components/Button.jsx";
 import Modal from "../components/Modal.jsx";
-import Dropdown from "../components/Dropdown.jsx";
 import IconButton from "../components/IconButton.jsx";
 import dayjs from "dayjs";
 import PopUpMessage from "../components/PopUpMessage.jsx";
 import LoadingIcon from "../components/LoadingIcon.jsx";
 import Autocomplete from "react-google-autocomplete";
-import { Input } from "antd";
 import CustomTextArea from "../components/TextArea.jsx";
-import WarningModal from "../components/WarningModal.jsx";
 import useAutoRefresh from "../utils/useAutoRefresh.js";
 import {
   getFormattedDate,
-  MAX_CAPACITY,
   autocompleteStyling,
   capitalizeFirstLetter,
   handleShowPopupMessage,
   renderRideCardInfo,
-  renderToAndFrom,
-  placeToLocation,
   flipFields,
-  NOTE_MAX_LENGTH,
-  normalizePhoneNumber,
 } from "../utils/utils";
 
 // Displaying and managing all upcoming Rideshares in the database
@@ -41,32 +32,12 @@ export default function AllRides() {
 
   const [loading, setLoading] = useState(true);
   const [ridesData, setRidesData] = useState([]); // storing fetched Rides Data
-  const [createRideModal, setCreateRideModal] = useState(false); // state for create new ride modal
-
   const [popupMessageInfo, setPopupMessageInfo] = useState({
     status: "",
     message: "",
   });
 
-  // whether we are showing validation modal (e.g. warning for creating new ride without all necessary fields in it filled)
-  const [showValidationModal, setShowValidationModal] = useState(false);
-  const [validationModalMessage, setValidationModalMessage] = useState(""); // message inside validation modal
-  const [validationModalTitle, setValidationModalTitle] = useState(""); // title of validation modal
-
-  // Refs for handling input elements
-  const originRef = useRef(null); // stores origin
-  const destinationRef = useRef(null); // stores destination
   const isInitialRender = useRef(true);
-
-  // for ride creation from inputs
-  const [origin, setOrigin] = useState(null);
-  const [capacity, setCapacity] = useState("");
-  const [dest, setDest] = useState(null);
-  const [date, setDate] = useState("");
-  const [time, setTime] = useState("");
-  const [rideNote, setRideNote] = useState("");
-  const [phoneNumber, setPhoneNumber] = useState("");
-  const [isCreatingRide, setIsCreatingRide] = useState(false);
 
   // for searching functionality
   const searchOriginRef = useRef(null);
@@ -94,12 +65,6 @@ export default function AllRides() {
     fields: ["formatted_address", "geometry", "name", "place_id"],
     types: ["establishment", "geocode"], // This will show both businesses and addresses
   };
-
-  // make capacity dropdown options
-  const capacity_options = Array.from({ length: MAX_CAPACITY }, (_, i) => ({
-    value: i + 1,
-    label: i + 1,
-  }));
 
   // searching for ride functionality
   const searchRide = async () => {
@@ -184,138 +149,6 @@ export default function AllRides() {
     } catch (error) {
       console.error("Error during fetch:", error);
     }
-  };
-
-  // Checks if all necessary fields are inputted in Create Ride modal
-  const checkCreateRideParams = () => {
-    const now = new Date();
-
-    const parsedDate = dayjs(date);
-    const parsedTime = dayjs(time);
-
-    let arrival_time_iso = null;
-
-    if (date && time) {
-      const arrival_time_string = `${date.format("YYYY-MM-DD")}T${time.format(
-        "HH:mm:ss"
-      )}`;
-      arrival_time_iso = new Date(arrival_time_string);
-    }
-
-    if (arrival_time_iso && now.getTime() >= arrival_time_iso.getTime()) {
-      setValidationModalTitle("Invalid Input");
-      setValidationModalMessage("Cannot enter a date in the past.");
-      setShowValidationModal(true); // Show the validation modal
-      return;
-    }
-
-    // Check if any required fields are missing
-    if (
-      !capacity ||
-      !origin ||
-      !dest ||
-      !date ||
-      !time ||
-      !phoneNumber.trim() ||
-      capacity === "" ||
-      origin === "" ||
-      dest === "" ||
-      date === "" ||
-      !parsedDate.isValid() ||
-      !parsedTime.isValid()
-    ) {
-      setValidationModalTitle("Missing fields");
-      setValidationModalMessage(
-        "You must provide all fields to create a ride."
-      );
-      setShowValidationModal(true); // Show the validation modal if something missing
-      return;
-    }
-
-    if (!normalizePhoneNumber(phoneNumber)) {
-      setValidationModalTitle("Invalid Input");
-      setValidationModalMessage("Please enter a valid 10-digit phone number.");
-      setShowValidationModal(true);
-      return;
-    }
-
-    createRide();
-  };
-
-  // Creates ride by making API call to /addride
-  const createRide = async () => {
-    setIsCreatingRide(true); // indicate adding ride is in progress
-    const arrival_time_string = `${date.format("YYYY-MM-DD")}T${time.format(
-      "HH:mm:ss"
-    )}`;
-    const arrival_time_iso = new Date(arrival_time_string).toISOString();
-    try {
-      const response = await fetch("/api/addride", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          capacity: capacity["label"],
-          origin: origin,
-          destination: dest,
-          arrival_time: arrival_time_iso,
-          note: rideNote,
-          phone_number: phoneNumber,
-        }),
-      });
-      const responseData = await response.json();
-
-      handleCloseRideModal(); // Close the modal after successfully created
-      resetSearch(); // Reset search filters
-      setInSearch(false);
-
-      handleShowPopupMessage(
-        setPopupMessageInfo,
-        responseData.success,
-        responseData.message
-      );
-      await fetchDashboardData(); // Refresh the dashboard, since new ride created
-      if (!response.ok) {
-        console.error("Request failed:", response.status);
-      }
-    } catch (error) {
-      console.error("Error during fetch:", error);
-    }
-    setLoading(false);
-    setIsCreatingRide(false); // reset
-  };
-
-  // Opens Create Ride modal
-  const handleOpenRideModal = () => {
-    setCreateRideModal(true);
-  };
-
-  // The nav bar's "Create a rideshare" button (desktop) and + button (mobile)
-  // navigate here with state { openCreate: true }. Open the modal, then clear
-  // that state so a refresh or back navigation does not reopen it.
-  const location = useLocation();
-  const navigate = useNavigate();
-  useEffect(() => {
-    if (location.state?.openCreate) {
-      handleOpenRideModal();
-      navigate(location.pathname, { replace: true, state: null });
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [location.key]);
-
-  // Closes Create Ride Modal, reset corresponding input fields
-  const handleCloseRideModal = () => {
-    setCreateRideModal(false);
-    setCapacity("");
-    setOrigin("");
-    setDest("");
-    setDate("");
-    setTime("");
-    setRideNote("");
-    setPhoneNumber("");
-    originRef.current = null;
-    destinationRef.current = null;
   };
 
   // Fetch data for dashboard from server using API call to /dashboard
@@ -844,145 +677,6 @@ export default function AllRides() {
             </Button>
           </div>
         </Modal>
-      )}
-      {createRideModal && (
-        <Modal
-          isOpen={createRideModal}
-          onClose={handleCloseRideModal}
-          title={"Create a Rideshare"}
-        >
-          <div className="flex flex-col gap-4">
-            <div className="flex flex-col gap-3">
-              <div>
-                <p className="font-medium">Capacity</p>
-                <p className="text-sm text-zinc-500 mb-1">
-                  Number of people you'd like to rideshare with, not including
-                  yourself
-                </p>
-                <Dropdown
-                  inputValue={capacity}
-                  setInputValue={setCapacity}
-                  options={capacity_options}
-                  isClearable
-                  placeholder="Select capacity"
-                />
-              </div>
-              <div className="flex flex-col">
-                <p className="font-medium mb-1">Origin & Destination</p>
-                <div className="flex items-center space-x-2 w-full justify-between max-md:grid max-md:grid-cols-[1fr_auto] max-md:gap-2 max-md:space-x-0">
-                  <Autocomplete
-                    key={"createOrigin"}
-                    className={autocompleteStyling}
-                    apiKey={google_api_key}
-                    placeholder="Enter origin"
-                    onPlaceSelected={(place) => {
-                      setOrigin(place); // Store selected place details in state
-                    }}
-                    onChange={(e) => onChange(e, setOrigin)}
-                    options={autocompleteOptions}
-                    ref={originRef}
-                  />
-                  <IconButton
-                    className="flex-none w-9 h-9 hover:bg-theme_light_1 max-md:col-start-2 max-md:row-start-1 max-md:row-span-2 max-md:self-center"
-                    type="flip"
-                    ariaLabel="Swap origin and destination"
-                    onClick={() =>
-                      flipFields(
-                        origin,
-                        dest,
-                        originRef,
-                        destinationRef,
-                        setOrigin,
-                        setDest
-                      )
-                    }
-                  ></IconButton>
-                  <Autocomplete
-                    key={"createDestination"}
-                    className={`${autocompleteStyling} max-md:col-start-1`}
-                    apiKey={google_api_key}
-                    placeholder="Enter destination"
-                    onPlaceSelected={(place) => {
-                      setDest(place); // Store selected place details in state
-                    }}
-                    onChange={(e) => onChange(e, setDest)}
-                    options={autocompleteOptions}
-                    ref={destinationRef}
-                  />
-                </div>
-                {/* preview so riders can confirm e.g. PHL vs EWR before posting */}
-                {origin?.formatted_address && dest?.formatted_address && (
-                  <div className="mt-3 py-2 rounded-lg bg-zinc-100">
-                    {renderToAndFrom({
-                      origin: placeToLocation(origin),
-                      destination: placeToLocation(dest),
-                    })}
-                  </div>
-                )}
-              </div>
-              <div>
-                <p className="font-medium mb-1">Arrival Time (in ET)</p>
-                <DateTimePicker
-                  date={date}
-                  setDate={setDate}
-                  time={time}
-                  setTime={setTime}
-                />
-              </div>
-              <div>
-                <p className="font-medium">Phone Number</p>
-                <p className="text-sm text-zinc-500 mb-1">
-                  Only shown to riders you accept
-                </p>
-                <Input
-                  type="tel"
-                  inputMode="tel"
-                  autoComplete="tel"
-                  className="max-md:!h-11"
-                  placeholder="(609) 555-1234"
-                  value={phoneNumber}
-                  onChange={(e) => setPhoneNumber(e.target.value)}
-                  maxLength={20}
-                />
-              </div>
-              <div>
-                <p className="font-medium mb-1">Optional Note to Riders</p>
-                <CustomTextArea
-                  placeholder={`Add an optional note here, such as a suggested time to meet up, if you're flexible with the arrival time, or anything else. (Max ${NOTE_MAX_LENGTH} characters).`}
-                  inputValue={rideNote}
-                  setInputValue={setRideNote}
-                  maxLength={NOTE_MAX_LENGTH}
-                />
-              </div>
-            </div>
-            <Button
-              className="self-end bg-theme_dark_1 py-1.5 px-3 text-white hover:bg-theme_medium_1 max-md:self-stretch"
-              onClick={checkCreateRideParams}
-              loading={isCreatingRide}
-            >
-              Submit
-            </Button>
-          </div>
-        </Modal>
-      )}
-      {showValidationModal && (
-        <WarningModal
-          isOpen={showValidationModal}
-          onClose={() => setShowValidationModal(false)}
-          title={validationModalTitle}
-        >
-          <div className="flex flex-col gap-3">
-            <p>{validationModalMessage}</p>
-            <div className="flex self-end max-md:self-stretch">
-              <Button
-                onClick={() => setShowValidationModal(false)}
-                className="bg-theme_medium_1 text-white hover:bg-theme_dark_1 max-md:flex-1"
-              >
-                Okay
-              </Button>
-            </div>
-          </div>
-        </WarningModal>
       )}
     </div>
   );
