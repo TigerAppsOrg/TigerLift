@@ -228,9 +228,13 @@ export default function MyRides() {
       );
     }
 
+    // getRideCardStatus shows a removed rider the ride as open or full, as
+    // Home needs; here it keeps a "Removed" label like the other requests
     const status = isPast
       ? "past"
-      : getRideCardStatus(ride, rides.netid, ride.request_status);
+      : ride.kind === "requested" && ride.request_status === "removed"
+        ? "requested"
+        : getRideCardStatus(ride, rides.netid, ride.request_status);
 
     return (
       <div
