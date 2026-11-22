@@ -238,7 +238,7 @@ def addride():
         note (optional): note with the rideshare
 
     Returns:
-        JSON: a success message
+        JSON: a success message and the new ride's ride_id
         400: if the phone number or note is invalid, or unable to create rideshare
     """
     user_info = _cas.authenticate()
@@ -286,8 +286,12 @@ def addride():
     origin_json = Json(origin)
     dest_json = Json(dest)
 
+    failed = (
+        jsonify({"success": False, "message": "Failed to create rideshare."}),
+        400,
+    )
     try:
-        database.create_ride(
+        ride_id = database.create_ride(
             user_info["netid"],
             user_info["displayname"],
             user_info["mail"],
@@ -298,12 +302,17 @@ def addride():
             note,
             phone_number,
         )
-        return jsonify({"success": True, "message": "Rideshare successfully created!"})
-    except:
-        return (
-            jsonify({"success": False, "message": "Failed to create rideshare."}),
-            400,
-        )
+    except Exception:
+        return failed
+    if ride_id is None:
+        return failed
+    return jsonify(
+        {
+            "success": True,
+            "message": "Rideshare successfully created!",
+            "ride_id": ride_id,
+        }
+    )
 
 
 def normalize_phone_number(phone_number):
