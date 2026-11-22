@@ -34,16 +34,7 @@ const mergeRides = (posted, requested, newestFirst) =>
 const SECTION_HEADING =
   "font-display text-mobile-h2 md:text-desktop-h2 text-content-primary";
 const GROUP_HEADING =
-  "flex items-center gap-2.5 text-mobile-subhead md:text-desktop-subhead text-content-primary";
-
-function LimeDot() {
-  return (
-    <span
-      aria-hidden="true"
-      className="inline-block size-6 shrink-0 rounded-full bg-fill-accent"
-    />
-  );
-}
+  "text-mobile-subhead md:text-desktop-subhead text-content-primary";
 
 export default function MyRides() {
   const navigate = useNavigate();
@@ -222,13 +213,12 @@ export default function MyRides() {
     return undefined;
   };
 
-  const renderRide = (ride, isPast, spanBoth) => {
+  const renderRide = (ride, isPast) => {
     const key = `${ride.kind}-${ride.id}`;
-    const span = spanBoth ? "lg:col-span-2" : "";
 
     if (!isPast && ride.kind === "posted" && ride.id === editingRideId) {
       return (
-        <div key={key} data-ride-id={key} className={span}>
+        <div key={key} data-ride-id={key}>
           <RideEditor
             ride={ride}
             onDone={handleEditDone}
@@ -246,7 +236,7 @@ export default function MyRides() {
       <div
         key={key}
         data-ride-id={key}
-        className={`flex flex-col gap-2 scroll-mt-24 rounded-lg ${span} ${
+        className={`flex flex-col gap-2 scroll-mt-24 rounded-lg ${
           highlightKey === key
             ? "outline outline-2 outline-offset-2 outline-line-inverse"
             : ""
@@ -270,17 +260,17 @@ export default function MyRides() {
 
   const renderGrid = (list, isPast) => (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-2 items-start">
-      {list.map((ride) => renderRide(ride, isPast, list.length === 1))}
+      {/* a lone ride keeps one column, as in Figma, rather than stretching
+          its button across the page */}
+      {list.map((ride) => renderRide(ride, isPast))}
     </div>
   );
 
-  const renderGroup = (title, list, { dot = false } = {}) =>
+  const renderGroup = (title, list) =>
     list.length > 0 && (
       <div className="flex flex-col gap-2">
         <h3 className={GROUP_HEADING}>
-          {dot && <LimeDot />}
           {title} ({list.length})
-          {dot && <span className="sr-only">, with new requests to join</span>}
         </h3>
         {renderGrid(list, false)}
       </div>
@@ -310,9 +300,6 @@ export default function MyRides() {
 
     const posted = rides.active.filter((ride) => ride.kind === "posted");
     const requested = rides.active.filter((ride) => ride.kind === "requested");
-    const hasRequests = posted.some(
-      (ride) => (ride.requested_riders || []).length > 0,
-    );
 
     return (
       <>
@@ -331,7 +318,7 @@ export default function MyRides() {
           />
         ) : (
           <div className="flex flex-col gap-6 md:gap-8">
-            {renderGroup("Rides you posted", posted, { dot: hasRequests })}
+            {renderGroup("Rides you posted", posted)}
             {renderGroup("Rides you requested", requested)}
           </div>
         )}
@@ -359,9 +346,10 @@ export default function MyRides() {
         {renderUpcoming()}
       </section>
 
-      {rides && (
+      {rides && rides.past.length > 0 && (
         <section
-          aria-labelledby="activity-heading"
+          aria-labelledby={showPastRides ? "activity-heading" : undefined}
+          aria-label={showPastRides ? undefined : "Past rides"}
           className="flex flex-col gap-2 md:gap-4"
         >
           <Button
@@ -379,13 +367,7 @@ export default function MyRides() {
               <h2 id="activity-heading" className={SECTION_HEADING}>
                 Your Activity
               </h2>
-              {rides.past.length > 0 ? (
-                renderGrid(rides.past, true)
-              ) : (
-                <p className="text-mobile-small md:text-desktop-small text-content-secondary">
-                  No past rides.
-                </p>
-              )}
+              {renderGrid(rides.past, true)}
             </div>
           )}
         </section>

@@ -24,6 +24,20 @@ function Section({ title, children }) {
   );
 }
 
+// Figma's "Requests" heading: a lime dot (fill-accent) and a subhead, so
+// new requests stand out right where they are answered
+function RequestsHeading({ count }) {
+  return (
+    <p className="flex items-center gap-2.5 text-mobile-subhead md:text-desktop-subhead text-content-primary">
+      <span
+        aria-hidden="true"
+        className="inline-block size-6 shrink-0 rounded-full bg-fill-accent"
+      />
+      Requests to join ({count})
+    </p>
+  );
+}
+
 function Note({ note }) {
   if (!note) return null;
   return (
@@ -92,7 +106,8 @@ function PostedDetails({ ride, respondingTo, onRespond }) {
       </Section>
 
       {requests.length > 0 && (
-        <Section title={`Requests to join (${requests.length})`}>
+        <div className="flex flex-col gap-2">
+          <RequestsHeading count={requests.length} />
           <ul className="flex flex-col gap-3">
             {requests.map(([netid, fullName, , note]) => {
               const key = `${ride.id}:${netid}`;
@@ -138,7 +153,7 @@ function PostedDetails({ ride, respondingTo, onRespond }) {
               );
             })}
           </ul>
-        </Section>
+        </div>
       )}
 
       {ride.phone_number && (
@@ -172,11 +187,14 @@ function RequestedDetails({ ride }) {
           className={COPY}
         />
       </div>
-      <Section title="Riders">
-        <p className="text-mobile-body md:text-desktop-body text-content-primary">
-          {ride.current_riders.length > 0 ? riderNames(ride) : "No riders yet"}
-        </p>
-      </Section>
+      {/* the card already shows the open seats; list riders only if any */}
+      {ride.current_riders.length > 0 && (
+        <Section title="Riders">
+          <p className="text-mobile-body md:text-desktop-body text-content-primary">
+            {riderNames(ride)}
+          </p>
+        </Section>
+      )}
       {accepted && ride.phone_number && (
         <p className="text-mobile-body md:text-desktop-body text-content-primary">
           Phone:{" "}
