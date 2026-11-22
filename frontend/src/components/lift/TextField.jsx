@@ -27,9 +27,11 @@ const TextField = forwardRef(function TextField(
   const helperId = `${fieldId}-helper`;
   const showHelperLine = Boolean(error || helper || counter);
 
+  // the 2px focus and error borders are a 1px border plus a 1px inset ring,
+  // so the text doesn't move
   const stateClasses = error
-    ? "border-2 border-status-danger"
-    : "border-line-strong focus:border-2 focus:border-line-inverse";
+    ? "border-status-danger ring-1 ring-inset ring-status-danger"
+    : "border-line-strong focus:border-line-inverse focus:ring-1 focus:ring-inset focus:ring-line-inverse";
 
   const Field = multiline ? "textarea" : "input";
 
