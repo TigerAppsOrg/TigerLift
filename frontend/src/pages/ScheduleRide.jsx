@@ -18,6 +18,7 @@ import {
   flipFields,
   getAirportFullName,
 } from "../utils/utils";
+import { fromEasternWallTime } from "../utils/easternTime";
 
 // Schedule a Ride, from Figma "Create a Rideshare" (desktop 56:1029) and
 // "Schedule a Ride" (mobile 20:218). Posts to /api/addride, then sends the
@@ -30,18 +31,27 @@ const AUTOCOMPLETE_OPTIONS = {
 
 const DEFAULT_SEATS = 3;
 
-// "2026-11-25T16:00:00" read in the browser's time zone, as the old create
-// modal did. Null unless both parts are set and valid.
+// The picked date and time read as Eastern time, which the label promises
+// and the ride cards display, whatever the browser's time zone. Null unless
+// both parts are set and valid.
 const getArrivalDate = (date, time) => {
   if (!date || !time || !date.isValid() || !time.isValid()) return null;
-  return new Date(`${date.format("YYYY-MM-DD")}T${time.format("HH:mm:ss")}`);
+  return fromEasternWallTime(
+    `${date.format("YYYY-MM-DD")}T${time.format("HH:mm:ss")}`,
+  );
 };
+
+// Figma's Day selector shows a friendly day ("Today"); the later formats
+// still let desktop users type a date.
+const DATE_FORMAT = ["ddd, MMM D", "M/D/YYYY", "YYYY-MM-DD"];
 
 const validate = ({ origin, destination, date, time, phone }) => {
   const errors = {};
   if (!origin?.place_id) errors.origin = "Choose where the ride starts.";
   if (!destination?.place_id) {
-    errors.destination = "Choose where the ride ends.";
+    errors.destination = errors.origin
+      ? "Choose where the ride starts and ends."
+      : "Choose where the ride ends.";
   } else if (origin?.place_id && origin.place_id === destination.place_id) {
     errors.destination = "Pick two different places.";
   }
@@ -85,6 +95,7 @@ function LocationRow({
   place,
   onSelect,
   onClear,
+  errorId,
   className = "",
   children,
 }) {
@@ -107,6 +118,8 @@ function LocationRow({
         onPlaceSelected={onSelect}
         // typing again means the chosen place no longer matches the text
         onChange={onClear}
+        aria-invalid={errorId ? true : undefined}
+        aria-describedby={errorId}
         className="w-full min-w-0 bg-transparent border-0 p-0 outline-none font-display text-mobile-h3 md:text-desktop-h3 text-content-primary placeholder:text-content-placeholder"
       />
       <PlaceDetail place={place} />
@@ -230,11 +243,21 @@ export default function ScheduleRide({ user }) {
         }
       : null;
 
-  const locationError = errors.origin || errors.destination;
+  // the destination message covers both when both are missing
+  const locationError = errors.destination || errors.origin;
+  const LOCATION_ERROR_ID = "schedule-location-error";
+  const DATETIME_ERROR_ID = "schedule-datetime-error";
+  const pickerA11y = (label) => ({
+    "aria-label": label,
+    "aria-invalid": errors.dateTime ? true : undefined,
+    "aria-describedby": errors.dateTime ? DATETIME_ERROR_ID : undefined,
+  });
 
   return (
     <div className="px-gutter-mobile pt-4 md:px-gutter md:py-12">
-      <div className="md:grid md:grid-cols-[minmax(0,718fr)_minmax(0,570fr)] md:gap-6 md:items-start">
+      {/* two columns only once there is room for the form and the preview;
+          tablets keep the single centered form */}
+      <div className="md:max-w-[718px] md:mx-auto lg:max-w-none lg:grid lg:grid-cols-[minmax(0,718fr)_minmax(0,570fr)] lg:gap-6 lg:items-start">
         <form
           noValidate
           onSubmit={submit}
@@ -271,6 +294,7 @@ export default function ScheduleRide({ user }) {
                   clearError("origin", "destination");
                 }}
                 onClear={() => origin && setOrigin(null)}
+                errorId={errors.origin ? LOCATION_ERROR_ID : undefined}
               />
               <LocationRow
                 id="schedule-destination"
@@ -283,6 +307,7 @@ export default function ScheduleRide({ user }) {
                   clearError("destination");
                 }}
                 onClear={() => destination && setDestination(null)}
+                errorId={errors.destination ? LOCATION_ERROR_ID : undefined}
                 className="border-t border-line"
               >
                 {/* Figma Icon/Switch on a lime circle, centred on the divider */}
@@ -299,14 +324,24 @@ export default function ScheduleRide({ user }) {
               </LocationRow>
             </div>
             {locationError && (
-              <p className="text-mobile-small text-status-danger-text">
+              <p
+                id={LOCATION_ERROR_ID}
+                className="text-mobile-small text-status-danger-text"
+              >
                 {locationError}
               </p>
             )}
           </div>
 
-          <div className="flex flex-col gap-2.5">
-            <p className="text-mobile-body md:text-desktop-body text-content-primary">
+          <div
+            role="group"
+            aria-labelledby="schedule-arrival-label"
+            className="flex flex-col gap-2.5"
+          >
+            <p
+              id="schedule-arrival-label"
+              className="text-mobile-body md:text-desktop-body text-content-primary"
+            >
               Arrive by (Eastern time)
             </p>
             <DateTimePicker
@@ -329,9 +364,21 @@ export default function ScheduleRide({ user }) {
               suffixIcon={
                 <img src={chevronDown} alt="" width="24" height="24" />
               }
+              dateProps={{
+                ...pickerA11y("Arrival date"),
+                format: DATE_FORMAT,
+                popupClassName: "lift-picker-popup",
+              }}
+              timeProps={{
+                ...pickerA11y("Arrival time"),
+                popupClassName: "lift-picker-popup",
+              }}
             />
             {errors.dateTime && (
-              <p className="text-mobile-small text-status-danger-text">
+              <p
+                id={DATETIME_ERROR_ID}
+                className="text-mobile-small text-status-danger-text"
+              >
                 {errors.dateTime}
               </p>
             )}
@@ -381,27 +428,35 @@ export default function ScheduleRide({ user }) {
             />
           )}
 
-          <div className="flex justify-end">
+          {/* right on desktop (ticket); centered on phones (Figma 20:218) */}
+          <div className="flex justify-center md:justify-end">
             <Button
               variant="primary"
               type="submit"
               loading={submitting}
-              className="max-md:w-full"
+              className="max-md:h-11"
             >
               {submitting ? "Posting…" : "Post ride"}
             </Button>
           </div>
         </form>
 
+        {/* Figma's Preview card (128:1242). The shared card draws the only
+            border; "open" shows it without a status pill, as in Figma. */}
         <aside
-          aria-label="Preview"
-          className="max-md:hidden bg-surface border border-line-strong rounded-lg p-5 flex flex-col gap-2"
+          aria-labelledby="schedule-preview-label"
+          className="max-lg:hidden flex flex-col gap-2"
         >
-          <p className="text-desktop-body text-content-primary">Preview</p>
+          <p
+            id="schedule-preview-label"
+            className="text-desktop-body text-content-primary"
+          >
+            Preview
+          </p>
           {preview ? (
-            <RideshareCard ride={preview} status="yours" />
+            <RideshareCard ride={preview} status="open" />
           ) : (
-            <p className="text-desktop-small text-content-secondary">
+            <p className="bg-surface border border-line-strong rounded-lg p-5 text-desktop-small text-content-secondary">
               Pick where and when to preview your ride.
             </p>
           )}
