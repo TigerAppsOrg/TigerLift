@@ -118,6 +118,8 @@ function LocationRow({
         onPlaceSelected={onSelect}
         // typing again means the chosen place no longer matches the text
         onChange={onClear}
+        // Enter picks a suggestion; don't let it submit the form
+        onKeyDown={(e) => e.key === "Enter" && e.preventDefault()}
         aria-invalid={errorId ? true : undefined}
         aria-describedby={errorId}
         className="w-full min-w-0 bg-transparent border-0 p-0 outline-none font-display text-mobile-h3 md:text-desktop-h3 text-content-primary placeholder:text-content-placeholder"
