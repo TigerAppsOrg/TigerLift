@@ -9,6 +9,15 @@ export default function MyDateTimePicker({
   time,
   setTime,
   allowClear = true,
+  // Optional, for pages that restyle or label the pickers (e.g. the
+  // "lift-picker" look on Schedule a Ride). Defaults keep the old look.
+  className = "",
+  datePlaceholder = "Select date",
+  timePlaceholder = "Select time",
+  dateId,
+  timeId,
+  status,
+  suffixIcon,
 }) {
   // on phones, tapping opens the picker without the on-screen keyboard
   const isMobile = useIsMobile();
@@ -55,14 +64,20 @@ export default function MyDateTimePicker({
   };
 
   return (
-    <div ref={wrapperRef} className="flex max-md:w-full max-md:scroll-mt-16">
+    <div
+      ref={wrapperRef}
+      className={`flex max-md:w-full max-md:scroll-mt-16 ${className}`}
+    >
       <DatePicker
         className="max-md:!h-11 max-md:flex-[1.2] max-md:!min-w-0"
         inputReadOnly={isMobile}
         onOpenChange={handleOpenChange}
         placement={isMobile ? "bottomLeft" : undefined}
         onChange={handleDateChange}
-        placeholder="Select date"
+        id={dateId}
+        status={status}
+        suffixIcon={suffixIcon}
+        placeholder={datePlaceholder}
         style={{ marginRight: "8px", height: "38px", minWidth: "120px" }}
         value={date}
         disabledDate={disabledDate}
@@ -75,7 +90,10 @@ export default function MyDateTimePicker({
         placement={isMobile ? "bottomLeft" : undefined}
         format="h:mm A"
         onChange={handleTimeChange}
-        placeholder="Select time"
+        id={timeId}
+        status={status}
+        suffixIcon={suffixIcon}
+        placeholder={timePlaceholder}
         style={{ height: "38px", minWidth: "120px" }}
         value={time}
         allowClear={allowClear}

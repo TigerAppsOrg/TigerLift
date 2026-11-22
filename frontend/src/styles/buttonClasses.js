@@ -13,6 +13,9 @@ const VARIANTS = {
   // Figma "Variant2"
   secondary:
     "bg-transparent text-content-primary border border-line-inverse hover:bg-surface-subtle hover:text-content-primary active:bg-surface-subtle",
+  // Figma Request Card "Accept" (node 132:1596); sizes use the primary set
+  success:
+    "bg-status-success text-content-on-inverse hover:opacity-90 hover:text-content-on-inverse active:opacity-90",
 };
 
 const SIZES = {
