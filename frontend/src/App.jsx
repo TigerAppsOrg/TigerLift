@@ -3,6 +3,7 @@ import { Navigate, Routes, Route } from "react-router-dom";
 import { ConfigProvider } from "antd";
 import AllRides from "./pages/AllRides";
 import MyRides from "./pages/MyRides";
+import ScheduleRide from "./pages/ScheduleRide";
 import NotFound from "./pages/NotFound";
 import Navbar from "./components/Navbar";
 import tailwindConfig from "../tailwind.config.js";
@@ -63,6 +64,10 @@ function App() {
                 <Route path="/" element={<Navigate to="/allrides" replace />} />
                 <Route path="/allrides" element={<AllRides />} />
                 <Route path="/myrides" element={<MyRides />} />
+                <Route
+                  path="/schedule"
+                  element={<ScheduleRide user={user} />}
+                />
                 <Route path="/*" element={<NotFound />} />
               </Routes>
             </main>
