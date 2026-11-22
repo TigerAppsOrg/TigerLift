@@ -258,10 +258,14 @@ export default function MyRides() {
     );
   };
 
+  // Two columns on wide screens; a lone ride spans the full width, as in
+  // Figma 57:1300.
   const renderGrid = (list, isPast) => (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-2 items-start">
-      {/* a lone ride keeps one column, as in Figma, rather than stretching
-          its button across the page */}
+    <div
+      className={`grid grid-cols-1 gap-2 ${
+        list.length > 1 ? "lg:grid-cols-2" : ""
+      }`}
+    >
       {list.map((ride) => renderRide(ride, isPast))}
     </div>
   );
