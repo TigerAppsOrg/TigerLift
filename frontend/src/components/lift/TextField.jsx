@@ -51,7 +51,9 @@ const TextField = forwardRef(function TextField(
         aria-invalid={error ? true : undefined}
         aria-describedby={showHelperLine ? helperId : undefined}
         className={`${FIELD} ${stateClasses} ${
-          multiline ? "h-20 p-4 resize-none max-md:h-28" : "h-control px-4"
+          multiline
+            ? "h-20 p-4 resize-none max-md:h-28"
+            : "h-control px-4 max-md:h-11"
         }`}
         {...inputProps}
       />

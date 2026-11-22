@@ -6,7 +6,7 @@ import { buttonClasses } from "../../styles/buttonClasses";
 //   icon    image URL (e.g. an imported Figma SVG)
 //   action  { label, to } for a link or { label, onClick } for a button
 export default function EmptyState({ icon, title, body, action }) {
-  const actionClasses = `${buttonClasses({ variant: "primary" })} md:h-auto md:px-8 md:py-4`;
+  const actionClasses = `${buttonClasses({ variant: "primary" })} max-md:h-11 md:h-auto md:px-8 md:py-4`;
   return (
     <div className="bg-surface border border-line-strong rounded-lg flex flex-col items-center justify-center gap-4 text-center px-6 py-10 md:px-8 md:py-16">
       {icon && (
