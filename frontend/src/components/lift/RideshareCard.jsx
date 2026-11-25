@@ -26,6 +26,7 @@ const REQUEST_LABELS = {
   pending: { text: "Requested", tone: "neutral" },
   accepted: { text: "You're in", tone: "success" },
   rejected: { text: "Declined", tone: "secondary" },
+  removed: { text: "Removed", tone: "danger" },
 };
 
 const getStatusLabel = (status, requestStatus) => {
@@ -105,7 +106,9 @@ function CardAction({ action, className }) {
  *   ride           a ride from /api/dashboard or /api/myrides
  *   status         "open" | "full" | "yours" | "requested" | "past"
  *                  (see getRideCardStatus in utils/rides.js)
- *   requestStatus  for "requested": "pending" | "accepted" | "rejected"
+ *   requestStatus  for "requested": "pending" | "accepted" | "rejected" |
+ *                  "removed" (Your Rides labels rides the poster removed
+ *                  you from; Home shows those as open or full)
  *   action         { label, to?, onClick?, variant?, disabled? }, the main
  *                  button; variant is "primary" (default) or "outline".
  *                  Leave it out for no button.
