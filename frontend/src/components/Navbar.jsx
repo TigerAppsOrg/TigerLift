@@ -147,7 +147,7 @@ export default function Navbar({ user_info }) {
 
   const openCreateRide = () => {
     setOpenPanel(null);
-    navigate("/allrides", { state: { openCreate: true } });
+    navigate("/schedule");
   };
 
   const onReadNotif = (notif) => {

@@ -4,6 +4,7 @@ import { ConfigProvider } from "antd";
 import Home from "./pages/Home";
 import RideDetails from "./pages/RideDetails";
 import MyRides from "./pages/MyRides";
+import ScheduleRide from "./pages/ScheduleRide";
 import NotFound from "./pages/NotFound";
 import Navbar from "./components/Navbar";
 import tailwindConfig from "../tailwind.config.js";
@@ -65,6 +66,10 @@ function App() {
                 <Route path="/allrides" element={<Home user_info={user} />} />
                 <Route path="/rides/:rideId" element={<RideDetails />} />
                 <Route path="/myrides" element={<MyRides />} />
+                <Route
+                  path="/schedule"
+                  element={<ScheduleRide user={user} />}
+                />
                 <Route path="/*" element={<NotFound />} />
               </Routes>
             </main>

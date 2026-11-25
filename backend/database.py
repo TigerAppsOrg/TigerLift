@@ -154,6 +154,9 @@ def create_ride(
     """
     Adds a ride to the Rides database. departure_start / departure_end are
     an optional window for when the ride leaves.
+
+    Returns:
+        int: the new ride's id, or None if the ride could not be added
     """
 
     current_riders = []
@@ -161,8 +164,9 @@ def create_ride(
     sql_command = f"""
         INSERT INTO Rides (admin_netid, admin_name, admin_email, max_capacity, current_riders,
         origin_dict, destination_dict, arrival_time, note, phone_number, departure_start,
-        departure_end, updated_at) VALUES (%s, %s, %s, %s, 
-        %s, %s, %s, %s, %s, %s, %s, %s, CURRENT_TIMESTAMP);   
+        departure_end, updated_at) VALUES (%s, %s, %s, %s,
+        %s, %s, %s, %s, %s, %s, %s, %s, CURRENT_TIMESTAMP)
+        RETURNING id;
     """
 
     values = (
@@ -180,6 +184,7 @@ def create_ride(
         departure_end,
     )
 
+    ride_id = None
     conn = connect()
 
     # if it was successful connection, execute SQL commands to database & commit
@@ -187,14 +192,18 @@ def create_ride(
         try:
             with conn.cursor() as cursor:
                 cursor.execute(sql_command, values)
+                ride_id = cursor.fetchone()[0]
                 conn.commit()
                 print("Ride addded successfully!")
         except Exception as e:
+            ride_id = None
             print(f"Error adding ride: {e}")
         finally:
             conn.close()
     else:
         print("Connection not established.")
+
+    return ride_id
 
 
 def delete_ride(netid, ride_id):
