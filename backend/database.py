@@ -148,17 +148,21 @@ def create_ride(
     arrival_time,
     note="",
     phone_number=None,
+    departure_start=None,
+    departure_end=None,
 ):
     """
-    Adds a ride to the Rides database
+    Adds a ride to the Rides database. departure_start / departure_end are
+    an optional window for when the ride leaves.
     """
 
     current_riders = []
 
     sql_command = f"""
         INSERT INTO Rides (admin_netid, admin_name, admin_email, max_capacity, current_riders,
-        origin_dict, destination_dict, arrival_time, note, phone_number, updated_at) VALUES (%s, %s, %s, %s, 
-        %s, %s, %s, %s, %s, %s, CURRENT_TIMESTAMP);   
+        origin_dict, destination_dict, arrival_time, note, phone_number, departure_start,
+        departure_end, updated_at) VALUES (%s, %s, %s, %s, 
+        %s, %s, %s, %s, %s, %s, %s, %s, CURRENT_TIMESTAMP);   
     """
 
     values = (
@@ -172,6 +176,8 @@ def create_ride(
         arrival_time,
         note,
         phone_number,
+        departure_start,
+        departure_end,
     )
 
     conn = connect()
@@ -441,7 +447,9 @@ def get_users_rides(netid):
                     ELSE ARRAY[RideRequests.netid, RideRequests.full_name, RideRequests.mail, RideRequests.note]
                 END
             ) FILTER (WHERE RideRequests.netid IS NOT NULL), ARRAY[]::text[][]) AS riderequesters,
-            Rides.phone_number
+            Rides.phone_number,
+            Rides.departure_start,
+            Rides.departure_end
         FROM 
             Rides 
         LEFT JOIN 
@@ -461,7 +469,9 @@ def get_users_rides(netid):
             Rides.updated_at, 
             Rides.note,
             Rides.current_riders,
-            Rides.phone_number;
+            Rides.phone_number,
+            Rides.departure_start,
+            Rides.departure_end;
     """
 
     values = (str(netid),)
@@ -488,7 +498,8 @@ def get_all_rides():
 
     sql_command = """
     SELECT id, admin_netid, admin_name, admin_email, max_capacity, origin_dict,
-    destination_dict, arrival_time, creation_time, updated_at, current_riders, note FROM Rides
+    destination_dict, arrival_time, creation_time, updated_at, current_riders, note,
+    departure_start, departure_end FROM Rides
     """
     conn = connect()
 
@@ -516,7 +527,8 @@ def search_rides(
 ):
     query = """
         SELECT id, admin_netid, admin_name, admin_email, max_capacity, origin_dict, 
-        destination_dict, arrival_time, creation_time, updated_at, current_riders, note FROM Rides
+        destination_dict, arrival_time, creation_time, updated_at, current_riders, note,
+        departure_start, departure_end FROM Rides
         WHERE 1=1
     """
 
@@ -572,7 +584,8 @@ def get_users_requested_rides(netid):
     sql_command = """
         SELECT Rides.id, admin_netid, admin_name, admin_email, max_capacity, origin_dict, destination_dict, 
             arrival_time, creation_time, updated_at, Rides.note, 
-            current_riders, RideRequests.status as ride_request_status, Rides.phone_number
+            current_riders, RideRequests.status as ride_request_status, Rides.phone_number,
+            Rides.departure_start, Rides.departure_end
         FROM Rides
         JOIN RideRequests ON Rides.id = RideRequests.ride_id
         WHERE RideRequests.netid = %s;
